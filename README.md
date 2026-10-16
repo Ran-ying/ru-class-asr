@@ -49,3 +49,5 @@ npm run build
 模块关系见 [architecture](docs/architecture.md)，完整自动化输出见 [test results](docs/test-results-v0.1.txt)。
 
 M1 实测方法、模型版本和延迟数据见 [M1 development](docs/m1-development.md)，M4 后期流程见 [hardware validation](docs/hardware-validation.md)。
+
+界面固定满屏，桌面左右各半，无顶栏/底栏；访问令牌从右上角「设置」填写。模型凭证规划见 [credentials plan](docs/credentials-plan.md)。
