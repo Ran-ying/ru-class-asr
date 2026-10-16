@@ -1,3 +1,9 @@
+> **HISTORICAL ACCEPTANCE RECORD (2026-10-17).** Prior M1 synthetic
+> engine testing and old gateway integration must not be mistaken for
+> current RU-Class browser-direct real microphone acceptance, or deferred
+> M4 acceptance. See [current validation protocol](hardware-validation.md)
+> and [current architecture](current-status.md).
+
 # v0.1 development delivery and acceptance report
 
 Date: 2026-10-16. Scope: PROJECT_SPEC.md revision 1.2 plus the user's M1-first implementation clarification. Only v0.1 is implemented.
