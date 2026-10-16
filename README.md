@@ -24,9 +24,9 @@ cp config.example.json config.json
 npm run dev
 ```
 
-`config.json` 在 `.gitignore` 中，不上传 API Key。示例 `listen.host=127.0.0.1`，`listen.port=8090`，`whisper.url=http://127.0.0.1:8080/inference`，`whisper.model=small`。更换 `listen.port` 即可自由配置监听端口；用 `RU_CLASS_ASR_CONFIG` 可指定私有 JSON 文件位置。环境变量 `ASR_HOST`、`ASR_PORT`、`ASR_API_KEY`、`WHISPER_URL`、`WHISPER_MODEL` 优先覆盖 JSON；原先 `.env` 方式依然适用。API Key 至少 24 字符，建议通过 `openssl rand -hex 32` 生成。
+`config.json` 在 `.gitignore` 中，不上传 API Key。示例 `listen.host=127.0.0.1`，`listen.port=8090`，`whisper.url=http://127.0.0.1:8080/inference`，`whisper.model=small`。更换 `listen.host` 和 `listen.port` 即可自由配置监听地址与端口；用 `RU_CLASS_ASR_CONFIG` 可指定私有 JSON 文件位置。环境变量 `ASR_HOST`、`ASR_PORT`、`ASR_API_KEY`、`WHISPER_URL`、`WHISPER_MODEL` 优先覆盖 JSON；原先 `.env` 方式依然适用。API Key 至少 24 字符，建议通过 `openssl rand -hex 32` 生成。
 
-为避免意外以明文暴露 API Key，ASR 默认只允许监听 loopback。确实需要绑定 `0.0.0.0` 时需额外设置 `ASR_ALLOW_PUBLIC_BIND=1`，**同时自行配置 TLS 反代和防火墙**；通常更建议 loopback + TLS Nginx 反代/私有隧道。不要将内部 whisper-server 端口开放到互联网。RU-Class 网页现在由用户的浏览器**直接**请求 ASR，不通过主项目 Node.js 转发。跨域浏览器需要 HTTPS API、API Token 和 CORS。
+ASR 默认监听 `127.0.0.1`，但可以直接将 `listen.host`（或 `ASR_HOST`）配置为 `0.0.0.0`、`::` 或其他本机可绑定地址，无需额外开关。监听非回环地址时，**应自行配置 HTTPS/TLS 反向代理、防火墙和访问控制**，避免明文传输 API Key；通常更建议 loopback + TLS Nginx 反代/私有隧道。不要将内部 whisper-server 端口开放到互联网。RU-Class 网页由用户的浏览器**直接**请求 ASR，不通过主项目 Node.js 转发。跨域浏览器需要 HTTPS API、API Token 和 CORS。
 
 **v0.1.3 CORS 规则：**
 
