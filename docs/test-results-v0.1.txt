@@ -1,0 +1,18 @@
+
+> ru-class-asr@0.1.0 test
+> node --import tsx --test tests/*.test.ts
+
+✔ five minutes of simulated frames stays within an eight-second buffer; duplicates/gaps rejected (98.70025ms)
+✔ portable WAV has correct sizes and 16 kHz mono PCM format (0.366625ms)
+✔ single inference coalesces pending windows and stop flushes tail (6.195791ms)
+✔ short tail flush, empty stop and cancellation suppressing late results (2.530584ms)
+✔ HTTP adapter sends multipart Russian WAV and rejects server/malformed responses (44.118791ms)
+✔ inference failure ends the session without hanging stop (0.231458ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 753.380584

@@ -45,3 +45,5 @@ npm run build
 自动化测试使用明确的模拟适配器/HTTP，不代表俄语识别或 M4 实测。真实 5 分钟实时重放见 [硬件流程](docs/hardware-validation.md)。网关 VPS 安装/启动说明见主仓库 README：独立 Node 进程、HTTPS/WSS 反向代理、单独访问和 Worker 令牌，模型只在 ASR 主机运行。
 
 错误排查：探测失败检查 whisper-server、模型加载、URL 和 HTTP 返回；连接认证失败检查 WORKER_TOKEN；远端只接受 WSS；断线需手动重启，不声称可靠恢复。勿提交密钥、私人地址、模型、录音、原始日志或个人路径。提交 Issue 时附脱敏的版本、CPU/GPU、后端和复现信息。社区反馈不等同于作者亲测。
+
+模块关系见 [architecture](docs/architecture.md)，完整自动化输出见 [test results](docs/test-results-v0.1.txt)。

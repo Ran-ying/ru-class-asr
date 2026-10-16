@@ -9,3 +9,11 @@ artifacts/
 models/
 *.wav
 *.mp3
+
+# Private classroom media and local model artifacts
+recordings/
+private/
+*.m4a
+*.flac
+*.ogg
+*.pcm
