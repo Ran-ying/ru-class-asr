@@ -26,3 +26,30 @@ test('OpenAI-compatible API authenticates, validates WAV/model, serializes and c
     for(let n=0;!cancelled&&n<100;n++)await new Promise(r=>setTimeout(r,5));assert.equal(cancelled,true);
   }finally{release?.();server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));}
 });
+
+test('explicit exact-origin CORS supports browser OPTIONS preflight but never exposes unknown origins',async()=>{
+  const key='SIMULATED_CORS_KEY_24_CHARACTERS';
+  const site='https://ru-class.example.test';
+  let calls=0;
+  const server=createAsrApi({infer:async()=>{calls++;return 'Привет';}},{apiKey:key,model:'small',allowedOrigins:[site]});
+  server.listen(0,'127.0.0.1');await new Promise<void>(r=>server.once('listening',r));
+  const url='http://127.0.0.1:'+(server.address() as any).port+'/v1';
+  try{
+    const preflight=await fetch(url+'/audio/transcriptions',{method:'OPTIONS',headers:{
+      Origin:site,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'authorization,content-type'
+    }});
+    assert.equal(preflight.status,204);
+    assert.equal(preflight.headers.get('access-control-allow-origin'),site);
+    assert.match(preflight.headers.get('access-control-allow-headers')||'',/Authorization/);
+    const unauthorized=await fetch(url+'/models',{headers:{Origin:site}});
+    assert.equal(unauthorized.status,401);
+    assert.equal(unauthorized.headers.get('access-control-allow-origin'),site);
+    const allowed=await fetch(url+'/models',{headers:{Origin:site,Authorization:'Bearer '+key}});
+    assert.equal(allowed.status,200);
+    assert.equal(allowed.headers.get('access-control-allow-origin'),site);
+    const denied=await fetch(url+'/models',{headers:{Origin:'https://other.example.test',Authorization:'Bearer '+key}});
+    assert.equal(denied.status,403);
+    assert.equal(denied.headers.get('access-control-allow-origin'),null);
+    assert.equal(calls,0);
+  }finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));}
+});
