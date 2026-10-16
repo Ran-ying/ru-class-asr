@@ -1,4 +1,4 @@
-# RU-Class ASR · v0.1.1 (开发修复分支)
+# RU-Class ASR · v0.1.3
 
 独立运行的 Whisper 语音识别 HTTP 服务，提供**OpenAI 兼容 API 的有限子集**。任何获得 API URL、模型和 Key 的服务都可调用它；不要求 RU-Class 主项目在线，也不需要主动连接主项目的旧 Worker。Node.js 应用跨平台，底层 `whisper.cpp` 构建及 GPU 后端按设备决定。当前先在 Mac M1 开发，M4 后期完成正式验收。
 
@@ -26,9 +26,18 @@ npm run dev
 
 `config.json` 在 `.gitignore` 中，不上传 API Key。示例 `listen.host=127.0.0.1`，`listen.port=8090`，`whisper.url=http://127.0.0.1:8080/inference`，`whisper.model=small`。更换 `listen.port` 即可自由配置监听端口；用 `RU_CLASS_ASR_CONFIG` 可指定私有 JSON 文件位置。环境变量 `ASR_HOST`、`ASR_PORT`、`ASR_API_KEY`、`WHISPER_URL`、`WHISPER_MODEL` 优先覆盖 JSON；原先 `.env` 方式依然适用。API Key 至少 24 字符，建议通过 `openssl rand -hex 32` 生成。
 
-为避免意外以明文暴露 API Key，ASR 默认只允许监听 loopback。确实需要绑定 `0.0.0.0` 时需额外设置 `ASR_ALLOW_PUBLIC_BIND=1`，**同时自行配置 TLS 反代和防火墙**；通常更建议 loopback + TLS Nginx 反代/私有隧道。不要将内部 whisper-server 端口开放到互联网。RU-Class 网页现在由用户的浏览器**直接**请求 ASR，不通过主项目 Node.js 转发。跨域浏览器需要 HTTPS API、API Token 和 CORS：在私有 `config.json` 中设置 `cors.allowedOrigins`，例如 `["https://class.example.com"]`，该域名只是示例，请填实际网页的准确 Origin。也可使用 `ASR_CORS_ORIGINS`，多个地址逗号分隔。默认拒绝所有跨域浏览器来源，但没有 `Origin` 的受信任服务端客户端不受影响。
+为避免意外以明文暴露 API Key，ASR 默认只允许监听 loopback。确实需要绑定 `0.0.0.0` 时需额外设置 `ASR_ALLOW_PUBLIC_BIND=1`，**同时自行配置 TLS 反代和防火墙**；通常更建议 loopback + TLS Nginx 反代/私有隧道。不要将内部 whisper-server 端口开放到互联网。RU-Class 网页现在由用户的浏览器**直接**请求 ASR，不通过主项目 Node.js 转发。跨域浏览器需要 HTTPS API、API Token 和 CORS。
 
-服务为允许的 Origin 处理无需 Bearer 的 `OPTIONS /v1/models` 和 `OPTIONS /v1/audio/transcriptions` 预检，响应 `Access-Control-Allow-Headers: Authorization, Content-Type`，正常 GET/POST 仍校验 Bearer API Key。不要设成任意通配站点来解决浏览器报错，也不要把自建 ASR 的密钥公开写到网页源代码中。
+**v0.1.3 CORS 规则：**
+
+- `"cors": {"allowedOrigins": []}`（**默认值**，包括未设置此字段）：**不限制浏览器来源**；任意网站 Origin 均可收到 CORS 响应并完成预检。
+- `"cors": {"allowedOrigins": ["https://class.example.com"]}`：**仅允许**列出的精确 Origin；可填写多个地址。示例域名需替换为实际网页来源。
+- 环境变量 `ASR_CORS_ORIGINS` 优先于 JSON。设置为空字符串时同样表示不限制；设置为逗号分隔的地址列表时表示启用白名单。
+- 无论哪种模式，`GET /v1/models` 和 `POST /v1/audio/transcriptions` **始终要求 Bearer API Key**。没有 `Origin` 的原生/服务端客户端仍保持原行为。
+
+空白名单便于在个人设备上由不同 RU-Class 域名直连使用，但**任何网站只要获得你的 API Key 都能尝试在浏览器中调用你的 ASR**。CORS 不负责身份验证或保护密钥，切勿因为允许全部 Origin 而删除 Bearer 校验；如果将 ASR 暴露在公网，应额外使用 HTTPS、强随机 Key、速率限制和访问控制。
+
+服务为允许的 Origin 处理无需 Bearer 的 `OPTIONS /v1/models` 和 `OPTIONS /v1/audio/transcriptions` 预检，响应 `Access-Control-Allow-Headers: Authorization, Content-Type`，正常 GET/POST 仍校验 Bearer API Key。不要把自建 ASR 的密钥公开写到网页源代码中；CORS 无限制并不等于无认证。
 
 ## HTTP API 子集
 

@@ -53,3 +53,50 @@ test('explicit exact-origin CORS supports browser OPTIONS preflight but never ex
     assert.equal(calls,0);
   }finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));}
 });
+
+test('empty or omitted CORS allowlist permits any browser Origin without disabling API-key authentication',async()=>{
+  const key='SIMULATED_OPEN_CORS_KEY_24_CHARACTERS';
+  for(const allowedOrigins of [[],undefined]){
+    const server=createAsrApi({infer:async()=>{throw new Error('inference must not run');}},{apiKey:key,model:'small',allowedOrigins});
+    server.listen(0,'127.0.0.1');
+    await new Promise<void>(resolve=>server.once('listening',resolve));
+    const base='http://127.0.0.1:'+(server.address() as any).port+'/v1';
+    try{
+      for(const origin of ['https://arbitrary.example','http://localhost:3000','https://another-app.example']){
+        const preflight=await fetch(base+'/audio/transcriptions',{method:'OPTIONS',headers:{
+          Origin:origin,'Access-Control-Request-Method':'POST',
+          'Access-Control-Request-Headers':'authorization,content-type'
+        }});
+        assert.equal(preflight.status,204);
+        assert.equal(preflight.headers.get('access-control-allow-origin'),origin);
+        assert.match(preflight.headers.get('access-control-allow-headers')||'',/Authorization/);
+        assert.equal(preflight.headers.get('vary'),'Origin');
+
+        const preflightModels=await fetch(base+'/models',{method:'OPTIONS',headers:{
+          Origin:origin,'Access-Control-Request-Method':'GET',
+          'Access-Control-Request-Headers':'authorization'
+        }});
+        assert.equal(preflightModels.status,204);
+        assert.equal(preflightModels.headers.get('access-control-allow-origin'),origin);
+
+        const missingKey=await fetch(base+'/models',{headers:{Origin:origin}});
+        assert.equal(missingKey.status,401);
+        assert.equal(missingKey.headers.get('access-control-allow-origin'),origin);
+
+        const wrongKey=await fetch(base+'/models',{headers:{Origin:origin,Authorization:'Bearer wrong'}});
+        assert.equal(wrongKey.status,401);
+
+        const models=await fetch(base+'/models',{headers:{Origin:origin,Authorization:'Bearer '+key}});
+        assert.equal(models.status,200);
+        assert.equal(models.headers.get('access-control-allow-origin'),origin);
+        assert.equal((await models.json() as any).data[0].id,'small');
+      }
+      const noOrigin=await fetch(base+'/models',{headers:{Authorization:'Bearer '+key}});
+      assert.equal(noOrigin.status,200); // Server-side clients work as before.
+      assert.equal(noOrigin.headers.get('access-control-allow-origin'),null);
+    }finally{
+      server.closeAllConnections();
+      await new Promise<void>(resolve=>server.close(()=>resolve()));
+    }
+  }
+});
