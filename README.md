@@ -26,7 +26,9 @@ npm run dev
 
 `config.json` 在 `.gitignore` 中，不上传 API Key。示例 `listen.host=127.0.0.1`，`listen.port=8090`，`whisper.url=http://127.0.0.1:8080/inference`，`whisper.model=small`。更换 `listen.port` 即可自由配置监听端口；用 `RU_CLASS_ASR_CONFIG` 可指定私有 JSON 文件位置。环境变量 `ASR_HOST`、`ASR_PORT`、`ASR_API_KEY`、`WHISPER_URL`、`WHISPER_MODEL` 优先覆盖 JSON；原先 `.env` 方式依然适用。API Key 至少 24 字符，建议通过 `openssl rand -hex 32` 生成。
 
-为避免意外以明文暴露 API Key，ASR 默认只允许监听 loopback。确实需要绑定 `0.0.0.0` 时需额外设置 `ASR_ALLOW_PUBLIC_BIND=1`，**同时自行配置 TLS 反代和防火墙**；通常更建议 loopback + TLS Nginx 反代/私有隧道。不要将内部 whisper-server 端口开放到互联网。主项目若在另一台 VPS 上，必须提供主项目服务器可访问的 HTTPS API 地址（或者受保护的隧道），其 `asr.baseUrl` 应包含 `/v1`。
+为避免意外以明文暴露 API Key，ASR 默认只允许监听 loopback。确实需要绑定 `0.0.0.0` 时需额外设置 `ASR_ALLOW_PUBLIC_BIND=1`，**同时自行配置 TLS 反代和防火墙**；通常更建议 loopback + TLS Nginx 反代/私有隧道。不要将内部 whisper-server 端口开放到互联网。RU-Class 网页现在由用户的浏览器**直接**请求 ASR，不通过主项目 Node.js 转发。跨域浏览器需要 HTTPS API、API Token 和 CORS：在私有 `config.json` 中设置 `cors.allowedOrigins`，例如 `["https://class.example.com"]`，该域名只是示例，请填实际网页的准确 Origin。也可使用 `ASR_CORS_ORIGINS`，多个地址逗号分隔。默认拒绝所有跨域浏览器来源，但没有 `Origin` 的受信任服务端客户端不受影响。
+
+服务为允许的 Origin 处理无需 Bearer 的 `OPTIONS /v1/models` 和 `OPTIONS /v1/audio/transcriptions` 预检，响应 `Access-Control-Allow-Headers: Authorization, Content-Type`，正常 GET/POST 仍校验 Bearer API Key。不要设成任意通配站点来解决浏览器报错，也不要把自建 ASR 的密钥公开写到网页源代码中。
 
 ## HTTP API 子集
 
