@@ -1,1 +1,14 @@
-{"listen":{"host":"127.0.0.1","port":8090},"apiKey":"","whisper":{"url":"http://127.0.0.1:8080/inference","model":"small"}}
+{
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 8090
+  },
+  "apiKey": "",
+  "whisper": {
+    "url": "http://127.0.0.1:8080/inference",
+    "model": "small"
+  },
+  "cors": {
+    "allowedOrigins": []
+  }
+}

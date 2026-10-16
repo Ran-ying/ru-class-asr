@@ -1,11 +1,29 @@
 import http from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import type { InferenceAdapter } from './inference.js';
-export function createAsrApi(adapter:InferenceAdapter, config:{apiKey:string;model:string}) {
+export function createAsrApi(adapter:InferenceAdapter, config:{apiKey:string;model:string;allowedOrigins?:string[]}) {
   if(config.apiKey.length<24 || /[\r\n]/.test(config.apiKey))throw new Error('ASR_API_KEY_MIN_24_CHARACTERS');
   let busy=false;
   const server=http.createServer(async(req,res)=>{
     res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
+    res.setHeader('Vary','Origin');
+    const origin=req.headers.origin;
+    if(origin){
+      if(!(config.allowedOrigins||[]).includes(origin)){
+        res.writeHead(403).end(JSON.stringify({error:{code:'origin_not_allowed'}}));return;
+      }
+      res.setHeader('Access-Control-Allow-Origin',origin);
+      res.setHeader('Access-Control-Allow-Methods','GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers','Authorization, Content-Type');
+      res.setHeader('Access-Control-Max-Age','600');
+    }
+    // CORS preflight must be handled *before* Bearer authentication; it never
+    // sends Authorization and should never initiate inference.
+    if(req.method==='OPTIONS'){
+      if(!origin){res.writeHead(400).end();return;}
+      if(!['/v1/models','/v1/audio/transcriptions'].includes(req.url||'')){res.writeHead(404).end();return;}
+      res.writeHead(204).end();return;
+    }
     const error=(status:number,code:string)=>{res.writeHead(status).end(JSON.stringify({error:{message:code,type:'invalid_request_error',code}}));};
     const credential=req.headers.authorization||'';const expected=`Bearer ${config.apiKey}`;
     if(Buffer.byteLength(credential)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(credential),Buffer.from(expected))){error(401,'invalid_api_key');return;}
