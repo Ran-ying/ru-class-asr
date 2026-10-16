@@ -1,3 +1,11 @@
+> **HISTORICAL GATEWAY INTEGRATION (2026-10-17).** Independent ASR's
+> live OpenAI-compatible HTTP contract remains useful, but the current
+> RU-Class browser sends requests **directly** to its selected CORS-enabled
+> HTTPS API. No old RU-Class Node.js API proxy, WebSocket gateway, or
+> main-server-held provider Key exists. See
+> [current status](current-status.md) and
+> [current acceptance](hardware-validation.md).
+
 # Current v0.1 interface revision · 2026-10-16
 
 This document supersedes the earlier outbound Worker topology and full-width bottom toolbar. The user's correction explicitly authorizes the following v0.1 boundary; no later-version model integrations are added.
