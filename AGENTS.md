@@ -6,3 +6,5 @@
 - Update architecture, module descriptions, development log and acceptance evidence alongside code.
 - Never commit tokens, .env, private domains/paths, classroom audio, model binaries or raw local logs. Use sanitized examples.
 - Run npm test, npm run typecheck and npm run build. Automated mock tests do not complete real M4/Metal + five-minute Russian/browser acceptance.
+
+- User clarification, 2026-10-16: M1 is the current development/integration machine. M4 formal hardware acceptance is deferred to a later stage; do not block current development on M4 availability or mislabel M1 measurements as M4.
