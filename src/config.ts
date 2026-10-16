@@ -19,7 +19,6 @@ export function loadConfig(path = process.env.RU_CLASS_ASR_CONFIG || 'config.jso
   const host = stringValue(process.env.ASR_HOST ?? json.listen?.host, 'listen.host', '127.0.0.1');
   const port = Number(process.env.ASR_PORT ?? json.listen?.port ?? 8090);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('listen.port must be between 1 and 65535');
-  if (!['127.0.0.1', 'localhost', '::1'].includes(host) && process.env.ASR_ALLOW_PUBLIC_BIND !== '1') throw new Error('Non-loopback ASR listener requires ASR_ALLOW_PUBLIC_BIND=1 (TLS and firewall required)');
   const origins=process.env.ASR_CORS_ORIGINS!==undefined
     ? process.env.ASR_CORS_ORIGINS.split(',').map(x=>x.trim()).filter(Boolean)
     : json.cors?.allowedOrigins||[];
