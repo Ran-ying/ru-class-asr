@@ -1,14 +1,43 @@
-# Repository working agreement
+# RU-Class-ASR maintainer contract — current (2026-10-17)
 
-- Follow ru-class/PROJECT_SPEC.md and docs/decisions.md. Only v0.1 and v0.1.1 fixes are approved.
-- Keep src/protocol.ts and docs/protocol.md identical to their fixed-version copies in ru-class, and run joint contract tests after changes.
-- Keep platform-specific installation outside portable Worker core. Configure engine URL/model/backend; do not hardcode Homebrew/Metal paths or vendor whisper.cpp into this repository.
-- Update architecture, module descriptions, development log and acceptance evidence alongside code.
-- Never commit tokens, .env, private domains/paths, classroom audio, model binaries or raw local logs. Use sanitized examples.
-- Run npm test, npm run typecheck and npm run build. Automated mock tests do not complete real M4/Metal + five-minute Russian/browser acceptance.
+Read `README.md`, `docs/current-status.md` and
+`docs/hardware-validation.md` before changes. The historical
+`docs/architecture.md`, `docs/protocol.md`, `src/worker.ts` and
+`src/session.ts` describe an obsolete outbound Worker WebSocket design;
+the **active entrypoint** is `src/index.ts`.
 
-- User clarification, 2026-10-16: M1 is the current development/integration machine. M4 formal hardware acceptance is deferred to a later stage; do not block current development on M4 availability or mislabel M1 measurements as M4.
+## Current service
 
-- Latest user correction: default ASR entry point serves an independent OpenAI-compatible HTTP API; main server calls URL/model/key and owns window scheduling. No outbound Worker is required in normal startup. Keep current contract in docs/api-integration-v0.1.md; older Worker docs/tests are migration history. Default ASR listener remains loopback, but any valid bind address can be configured directly via listen.host or ASR_HOST without a separate opt-in flag. Public exposure requires operator-managed HTTPS/firewall; never deploy without explicit authorization. Toolbar belongs to the right half.
+- A standalone Node.js OpenAI-compatible HTTP transcription API.
+  `src/api.ts` exposes Bearer-authenticated `GET /v1/models` and
+  `POST /v1/audio/transcriptions`. `src/inference.ts` calls a
+  separately installed `whisper.cpp` inference HTTP endpoint.
+- No dependency on RU-Class's old gateway or shared server-side models.
+  RU-Class v0.2 browser uses browser-direct BYOK and its own CORS-compliant
+  ASR provider; no global RU-Class default service, proxy or browser login.
+- Default listener is loopback, but **all valid local bind addresses** may
+  be configured directly using `listen.host` or `ASR_HOST`; no special
+  `ASR_ALLOW_PUBLIC_BIND` environment flag or ban on `0.0.0.0`.
+- Empty/missing `cors.allowedOrigins` permits any Origin, and a populated
+  list permits only those exact Origins. CORS preflight occurs without
+  Authorization but both data endpoints still require Bearer.
+- Preserve the 16kHz PCM16 mono WAV contract (30 seconds/2 MiB per request),
+  bounded one-at-a-time inference and HTTP 429 backpressure. No invented
+  word timestamps, SSE, or claim of arbitrary audio-format support.
 
-- v0.1.1 correction: ASR is a standalone authenticated OpenAI-compatible HTTP service; load private `config.json` (or environment overrides) to set listener and whisper engine. Legacy Worker WebSocket remains migration-only. Never commit config.json or expose raw whisper.cpp. macOS/M1 first; M4 acceptance deferred.
+## Change controls and verification
+
+- Never commit credentials, private DNS/hosts, raw classroom recordings,
+  model binaries or unredacted device logs. Keep personal config ignored.
+- Bind to a public interface only if the *operator* configures it; TLS,
+  firewall, and API-key handling are operational duties, not silently
+  delivered by a host string. Do not deploy for the user without approval.
+- Run `npm test`, `npm run typecheck`, `npm run build` and inspect
+  relevant CI results. Verify browser CORS/HTTPS with a physical browser.
+- Keep docs in sync with the active API. Historical protocol/Worker content
+  should be labeled archival instead of copied into new deployment recipes.
+- M1/Metal 101.16-second synthetic development inference was observed;
+  five-minute real Russian microphone/classroom and later M4 formal
+  acceptance remain unverified. Do not call automated tests a hardware pass.
+- User deferred P2 long recording and full in-browser playback/recovery in
+  the main RU-Class repository; do not introduce incidental P2 changes here.
