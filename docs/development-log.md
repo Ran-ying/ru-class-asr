@@ -37,3 +37,7 @@ UI validation: main regression 12/12 passed; TypeScript and build passed. Actual
 ## Current API boundary correction (2026-10-16)
 
 The user corrected the topology: ASR is an independent OpenAI-compatible HTTP API, called by the main server using base URL/model/key. Current entry points no longer require an outbound Worker; local browser authentication is automatic. Toolbar is inside the right half. Earlier Worker-topology and full-width-toolbar descriptions/measurements are historical. Main 13/13, ASR 7/7, both typechecks/builds passed; real M1 8 s synthetic Russian API replay produced 6 results before stop with tail completion. M4 remains deferred. Full contract, credential boundary, measurements and limits: [api-integration-v0.1.md](api-integration-v0.1.md).
+
+## Listener configuration simplification (2026-10-16)
+
+Removed the environment-variable opt-in for non-loopback ASR addresses. The default remains `127.0.0.1`, while `listen.host` or `ASR_HOST` can now directly select `0.0.0.0`, `::` or an interface address. Configuration regression tests now cover JSON and environment overrides. API authentication, CORS and operational HTTPS/firewall responsibilities remain unchanged. No runtime deployment was performed.
