@@ -1,13 +1,106 @@
-# Independent v0.1 hardware acceptance
+# Independent ASR API hardware / browser validation (current v0.1.3)
 
-Status: **M4 PENDING_HARDWARE_VALIDATION, deferred by the user**. Current development uses Apple M1 / 8 GB. Real M1 small/Metal integration and a 101.16-second synthetic Russian paced replay passed; see `m1-development.md`. The following formal workflow is for the later M4 stage. M1 results, automated mocks and responsive emulation do not prove M4, physical microphone, Safari or iPad acceptance.
+**Status: M1 DEVELOPMENT SMOKE PASSED; physical-browser end-to-end natural
+classroom evidence PENDING; Mac mini M4 FORMAL HARDWARE ACCEPTANCE DEFERRED.**
+This document uses the current independent HTTP ASR API, **not** the retired
+WebSocket gateway and Worker. Historical M1 synthetic replay details remain
+in `m1-development.md`; those measurements do not establish acceptance of
+the later browser-direct RU-Class architecture.
 
-1. On the Mac mini M4, record macOS version, CPU/RAM, Node version and exact whisper.cpp commit (`git rev-parse HEAD`). Build and start the external resident whisper-server as in README. Capture local startup logs proving the loaded multilingual model and actual Metal backend. Keep raw logs private; include only redacted evidence in a public report. Worker status alone is a configured label.
-2. Start the resident engine, independent ASR API, then main project using its ASR_BASE_URL / ASR_API_KEY / ASR_MODEL. Use a five-minute-or-longer Russian classroom recording you have permission to process, or speak through a real browser microphone. Keep the original audio outside Git. To replay, convert locally: `ffmpeg -i source.wav -ar 16000 -ac 1 -c:a pcm_s16le ru-16k.wav`.
-3. In the ASR repository, set `GATEWAY_CLIENT_URL=ws://127.0.0.1:3000/ws/client` for the local main app. The replay script obtains local session authentication automatically. Run `npm run replay -- /path/to/ru-16k.wav artifacts/replay.json`. This sends captured samples at real audio speed through the authenticated gateway and independent ASR API; it never calls a mock engine. `--allow-short` is a smoke test only. Output is ignored by Git and excludes token, host, filename, audio and transcript.
-4. Separately open the web page, start microphone capture and verify live Russian before stopping, at least five minutes of responsiveness, rolling text without whole-window cumulative duplication, and final tail flush. Replay tests the transport/engine, while the browser test checks actual getUserMedia/AudioWorklet and UI. Observe 1:1 layout with controls at the bottom of the right half on landscape desktop/iPad and live captions on narrow screens. Record browser/device versions. Do not assume iPad acceptance from desktop checks.
-5. Measure window span, HTTP inference time and audio-end-to-display/result time separately. Copy mean, p50, p95 and sample count from replay JSON; use browser display values for the real microphone path. The network metric excludes hardware input buffering, filter lookahead and 200 ms batching. For acoustic end-to-end latency, manually compare known speech markers in a screen+audio recording and state the method.
-6. Test a denied microphone permission, sever the browser socket, and stop the ASR API while recording. Capture should stop with a visible error and no fake success. Restart means a new session; v0.1 does not recover missing audio. Test silence and stopping during inference. Check no late result from the old session reaches the next session.
-7. Report actual model, 8 s / 1 s / 2 s (or chosen) parameters, five-minute material description/hash, observed accuracy/repetition, all latency statistics and remaining issues. Review raw output locally for privacy before committing only the redacted findings. Update `docs/acceptance-v0.1.md` in both repositories. Change pending status only after the required real evidence exists.
+## 1. Prepare the actual inference engine
 
-For joint automated contract tests, install both repositories side by side, then from ru-class run `ASR_REPO=../ru-class-asr npm test`. The test uses an explicitly named `SIMULATED_TEST` HTTP fixture; it must never be included in real acceptance metrics.
+On a test Mac, outside this repository, build whisper.cpp with the
+appropriate Metal backend and start its standalone `whisper-server` with
+a multilingual Russian-capable model. Record the exact whisper.cpp commit,
+model digest, CPU, RAM, macOS, Node and terminal engine logs privately.
+Only actual engine logs may confirm Metal (the ASR API deliberately prints
+`backend: unverified:check-engine-logs`).
+
+Example upstream engine command, from the whisper.cpp checkout:
+
+```sh
+cmake -B build -DGGML_METAL=ON
+cmake --build build --config Release -j --target whisper-server
+sh models/download-ggml-model.sh small
+./build/bin/whisper-server --host 127.0.0.1 --port 8080 -m models/ggml-small.bin -l ru
+```
+
+## 2. Start the standalone API
+
+```sh
+npm ci
+cp config.example.json config.json
+# Edit the ignored config.json with a private random API Key >=24 chars.
+# Expected: listen.host=127.0.0.1; listen.port=8090;
+# whisper.url=http://127.0.0.1:8080/inference; whisper.model=small
+npm run dev
+```
+
+Startup performs a small real inference probe against the engine before
+listening. Do not put the private Key in commands checked into a repository,
+log captures or screenshots. The test API's URL for same-device CLI clients
+is `http://127.0.0.1:8090/v1`; it is **not** directly usable by a browser
+running on a different device.
+
+## 3. Verify API and CORS independently
+
+Use an authorized local secret stored outside Git. Check all combinations
+with a real API client:
+
+- `GET /v1/models` without/wrong Bearer -> HTTP 401; correct Bearer ->
+  HTTP 200 and configured model ID.
+- An authenticated `POST /v1/audio/transcriptions` with a private,
+  preconverted **16-kHz mono PCM16 WAV** and `model`, `language=ru`,
+  `response_format=json` returns an actual Russian hypothesis, not mock.
+- Wrong model -> 400; invalid WAV -> 400; unsupported payload -> appropriate
+  error; simultaneous valid inference requests may return 429.
+- `OPTIONS /v1/audio/transcriptions` from the actual RU-Class site Origin
+  must return the required CORS response without Bearer, while subsequent
+  POST still requires Bearer. Exercise unrestricted empty origin list AND
+  a nonempty exact-Origin list in separate tests.
+
+A local `curl` request does not test a browser preflight or HTTPS.
+For remote browser access, the operator independently provisions an
+authenticated, firewalled TLS reverse proxy (or secure tunnel) in front of
+the ASR API and restricts access to the internal whisper.cpp port.
+Binding `ASR_HOST=0.0.0.0` is allowed directly but does not itself
+provide TLS or a firewall.
+
+## 4. Current RU-Class browser-direct end-to-end test
+
+Open the RU-Class static HTTPS site on a physical supported device.
+In the browser's speech provider settings, provide the tester's own
+ASR `https://...` URL ending in `/v1`, model and private Bearer Key.
+The site has **no central login or ASR proxy**; the user's browser must
+reach the selected ASR endpoint and the response must satisfy CORS.
+
+Record at least five minutes of natural Russian speech only with required
+permission, and privately capture observations:
+
+1. AudioWorklet permission, actual physical microphone input, first live
+   captions, subsequent changes and stop-finalization behavior.
+2. Audio sample range, ASR request/response times, request frequency, 429
+   retry behavior and response when the engine disconnects.
+3. Compare the visible transcript and the original private WAV for repeated
+   speech, lost phrases and Whisper hallucinations. **Counts are not WER.**
+   Browser caption projection happens in `ru-class`; its failures are not
+   necessarily the underlying whisper.cpp engine's.
+4. Keep the private audio, hypotheses, API Key and domain out of public
+   GitHub artifacts; publish only a redacted hardware/configuration/result
+   summary and hashes where appropriate.
+
+A different device accessing `localhost` reaches *its own* loopback,
+not the test Mac. Remote HTTPS and CORS must be verified from that device.
+Do not call a desktop responsive-layout simulation an iPad microphone test.
+
+## 5. Acceptance reporting and outstanding work
+
+Separate these labels in reports:
+- `AUTOMATED_TESTS_PASSED` for unit/integration CI;
+- `M1_REAL_ENGINE_SYNTHETIC_SMOKE_PASSED` for the measured prior M1 run;
+- `BROWSER_DIRECT_REAL_MIC_VERIFIED` only after actual browser evidence;
+- `M4_FORMAL_HARDWARE_VALIDATED` only after running this protocol on M4.
+
+The user's deferred **P2 long-duration recording/recovery/full in-page
+playback** belongs to the main RU-Class repository and is not part of this
+ASR protocol cleanup. Never mark it complete on the strength of ASR tests.
