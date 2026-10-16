@@ -8,10 +8,15 @@ import { event,encodeAudio,type AudioHeader } from '../src/protocol.js';
 
 const [file,output='artifacts/replay.json',short] = process.argv.slice(2);
 if(!file) throw new Error('Usage: npm run replay -- Russian-16k-mono-pcm16.wav [artifacts/replay.json] [--allow-short]');
-const token=process.env.CLIENT_TOKEN || '';
-if(token.length<24)throw new Error('Set CLIENT_TOKEN locally; never put it in command arguments or committed files');
+let token=process.env.CLIENT_TOKEN || '';
 const url=new URL(process.env.GATEWAY_CLIENT_URL || 'ws://127.0.0.1:3000/ws/client');
 if(!['ws:','wss:'].includes(url.protocol) || url.username || url.password || url.search || (url.protocol==='ws:' && !['localhost','127.0.0.1','[::1]'].includes(url.hostname)))throw new Error('Use WSS for a remote gateway');
+if(!token && url.protocol==='ws:' && ['localhost','127.0.0.1'].includes(url.hostname)) {
+  const response=await fetch(`http://${url.host}/api/bootstrap`,{signal:AbortSignal.timeout(5000)});
+  if(!response.ok)throw new Error('LOCAL_SESSION_AUTH_FAILED');
+  token=(await response.json() as any).clientToken;
+}
+if(token.length<24)throw new Error('SESSION_AUTH_REQUIRED');
 const wav=await readFile(file);
 if(wav.toString('ascii',0,4)!=='RIFF' || wav.toString('ascii',8,12)!=='WAVE')throw new Error('Expected RIFF WAV');
 let formatOK=false,pcm:Buffer|undefined;

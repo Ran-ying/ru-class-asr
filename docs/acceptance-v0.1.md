@@ -58,3 +58,7 @@ Implementation source baselines: main `d07280d4a8f51ba93907388f90be1ac7f0426a4c`
 UI revision 2026-10-16: fixed viewport, equal desktop columns, no document scrolling/top/bottom bars; gateway token moved into Settings. This UI change leaves audio and inference protocol unchanged. Layout checks are recorded in the development log.
 
 UI revision checks passed: 1366×900, 390×844 and 900×400 document heights matched viewport heights. Desktop widths were 683/683. Settings open/close and missing-token redirect were checked in the actual browser; main regression 12/12, typecheck and build passed. No new model integration or key storage was added.
+
+## Current API boundary correction (2026-10-16)
+
+The user corrected the topology: ASR is an independent OpenAI-compatible HTTP API, called by the main server using base URL/model/key. Current entry points no longer require an outbound Worker; local browser authentication is automatic. Toolbar is inside the right half. Earlier Worker-topology and full-width-toolbar descriptions/measurements are historical. Main 13/13, ASR 7/7, both typechecks/builds passed; real M1 8 s synthetic Russian API replay produced 6 results before stop with tail completion. M4 remains deferred. Full contract, credential boundary, measurements and limits: [api-integration-v0.1.md](api-integration-v0.1.md).

@@ -14,3 +14,7 @@
 - User implementation clarification (2026-10-16): use the current M1 / 8 GB machine for development and real engine integration now. Mac mini M4 formal acceptance is intentionally deferred; it does not block M1 development. Record M1 results separately and retain the v0.1-only scope.
 
 - UI clarification (2026-10-16): fixed viewport with no document scrolling; equal desktop columns; visible top/bottom bars removed. Gateway access moves into a top-right native Settings dialog. Content can scroll only inside its own panel. credentials-plan.md reserves three model configuration groups without adding model integrations.
+
+## Current API boundary correction (2026-10-16)
+
+The user corrected the topology: ASR is an independent OpenAI-compatible HTTP API, called by the main server using base URL/model/key. Current entry points no longer require an outbound Worker; local browser authentication is automatic. Toolbar is inside the right half. Earlier Worker-topology and full-width-toolbar descriptions/measurements are historical. Main 13/13, ASR 7/7, both typechecks/builds passed; real M1 8 s synthetic Russian API replay produced 6 results before stop with tail completion. M4 remains deferred. Full contract, credential boundary, measurements and limits: [api-integration-v0.1.md](api-integration-v0.1.md).

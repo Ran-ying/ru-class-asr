@@ -1,0 +1,30 @@
+Current independent ASR API revision; automated mocks are explicitly labeled.
+
+
+> ru-class-asr@0.1.0 test
+> node --import tsx --test tests/*.test.ts
+
+✔ OpenAI-compatible API authenticates, validates WAV/model, serializes and cancels inference (64.932417ms)
+✔ five minutes of simulated frames stays within an eight-second buffer; duplicates/gaps rejected (104.558208ms)
+✔ portable WAV has correct sizes and 16 kHz mono PCM format (0.518958ms)
+✔ single inference coalesces pending windows and stop flushes tail (4.908917ms)
+✔ short tail flush, empty stop and cancellation suppressing late results (0.688916ms)
+✔ HTTP adapter sends multipart Russian WAV and rejects server/malformed responses (35.13275ms)
+✔ inference failure ends the session without hanging stop (0.225334ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 479.932042
+
+
+> ru-class-asr@0.1.0 typecheck
+> tsc --noEmit
+
+
+
+> ru-class-asr@0.1.0 build
+> tsc
