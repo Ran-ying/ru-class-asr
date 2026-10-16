@@ -1,6 +1,6 @@
 # RU-Class ASR · v0.1
 
-跨平台 Node.js/TypeScript Worker，主动连接 RU-Class 网关，把远端浏览器 PCM 组织为重叠 WAV 窗口，通过可替换适配器调用常驻 whisper.cpp HTTP 服务。核心无 Metal/Homebrew/系统路径依赖。Mac mini M4 为作者首个目标验收平台；实际结果见 [验收报告](docs/acceptance-v0.1.md)。其他操作系统尚未由作者验证，欢迎自行部署并反馈。
+跨平台 Node.js/TypeScript Worker，主动连接 RU-Class 网关，把远端浏览器 PCM 组织为重叠 WAV 窗口，通过可替换适配器调用常驻 whisper.cpp HTTP 服务。核心无 Metal/Homebrew/系统路径依赖。当前在 M1 / 8 GB 上开发，small/Metal 的真实联调已通过；Mac mini M4 留待后期正式验收。实际结果见 [验收报告](docs/acceptance-v0.1.md)。其他操作系统尚未由作者验证，欢迎自行部署并反馈。
 
 ## macOS 安装与启动
 
@@ -47,3 +47,5 @@ npm run build
 错误排查：探测失败检查 whisper-server、模型加载、URL 和 HTTP 返回；连接认证失败检查 WORKER_TOKEN；远端只接受 WSS；断线需手动重启，不声称可靠恢复。勿提交密钥、私人地址、模型、录音、原始日志或个人路径。提交 Issue 时附脱敏的版本、CPU/GPU、后端和复现信息。社区反馈不等同于作者亲测。
 
 模块关系见 [architecture](docs/architecture.md)，完整自动化输出见 [test results](docs/test-results-v0.1.txt)。
+
+M1 实测方法、模型版本和延迟数据见 [M1 development](docs/m1-development.md)，M4 后期流程见 [hardware validation](docs/hardware-validation.md)。

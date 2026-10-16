@@ -17,3 +17,6 @@ private/
 *.flac
 *.ogg
 *.pcm
+*.aiff
+*.aac
+*.webm
