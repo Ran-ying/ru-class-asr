@@ -35,7 +35,9 @@ the **active entrypoint** is `src/index.ts`.
 - Run `npm test`, `npm run typecheck`, `npm run build` and inspect
   relevant CI results. Verify browser CORS/HTTPS with a physical browser.
 - Keep docs in sync with the active API. Historical protocol/Worker content
-  should be labeled archival instead of copied into new deployment recipes.
+  should be labeled archival in *separate* current-status/README notes, not
+  by editing mirrored protocol files. `src/protocol.ts` and `docs/protocol.md`
+  must remain byte-identical to their copies in `ru-class`; CI checks that.
 - M1/Metal 101.16-second synthetic development inference was observed;
   five-minute real Russian microphone/classroom and later M4 formal
   acceptance remain unverified. Do not call automated tests a hardware pass.
