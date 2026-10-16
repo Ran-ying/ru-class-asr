@@ -2,6 +2,16 @@
 
 独立运行的 Whisper 语音识别 HTTP 服务，提供**OpenAI 兼容 API 的有限子集**。任何获得 API URL、模型和 Key 的服务都可调用它；不要求 RU-Class 主项目在线，也不需要主动连接主项目的旧 Worker。Node.js 应用跨平台，底层 `whisper.cpp` 构建及 GPU 后端按设备决定。当前先在 Mac M1 开发，M4 后期完成正式验收。
 
+## 当前维护与验收入口
+
+- [当前独立 HTTP API 架构、监听/CORS 语义与验收状态](docs/current-status.md)
+- [真实硬件和浏览器直连验收流程](docs/hardware-validation.md)
+- [维护者工作规范](AGENTS.md)
+
+历史 Worker/WebSocket 方案已退出当前启动路径。浏览器直连用户自选
+ASR 端点不依赖 RU-Class 主站服务器，也不使用全站默认 AI 模型。
+目前 M1 合成音频/Metal 联调不等于真实课堂或 M4 正式验收。
+
 ## whisper.cpp 推理引擎
 
 首先在本仓库外安装官方 [whisper.cpp](https://github.com/ggml-org/whisper.cpp/tree/master/examples/server)。Mac Apple Silicon 示例（在 whisper.cpp 项目根目录执行）：

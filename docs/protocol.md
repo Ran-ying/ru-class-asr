@@ -1,3 +1,8 @@
+> **ARCHIVED WORKER/WEBSOCKET PROTOCOL (2026-10-17).** Retained for old
+> gateway contract history only; not part of current ASR API runtime.
+> See [current status](current-status.md) and [README](../README.md)
+> for the independent Bearer-protected HTTP API.
+
 # RU-Class wire protocol 0.1
 
 This document is identical in both repositories. `src/protocol.ts` in the Worker and `apps/server/src/protocol.ts` in the gateway are contract copies; change the version and contract tests together. v0.1 does not emit `asr.stable` or confirmed sentences.

@@ -1,3 +1,11 @@
+> **HISTORICAL WORKER ARCHITECTURE (2026-10-17).** This document describes
+> a pre-v0.1.1 Worker-to-gateway WebSocket scheme, not the active service.
+> The actual standalone `src/index.ts` starts `src/api.ts`, which calls
+> a separately installed whisper.cpp engine. See
+> [current architecture and status](current-status.md),
+> [README](../README.md), and
+> [current hardware acceptance](hardware-validation.md).
+
 # Current v0.1 interface revision · 2026-10-16
 
 This document supersedes the earlier outbound Worker topology and full-width bottom toolbar. The user's correction explicitly authorizes the following v0.1 boundary; no later-version model integrations are added.
