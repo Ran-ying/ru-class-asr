@@ -5,9 +5,9 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {loadConfig} from '../src/config.js';
 
-test('ASR JSON configuration sets listener and engine while requiring explicit non-loopback opt-in',async()=>{
+test('ASR JSON and environment configuration allow non-loopback listeners without extra flags',async()=>{
   const dir=await mkdtemp(join(tmpdir(),'ru-class-asr-config-'));const file=join(dir,'config.json');
-  const keys=['ASR_HOST','ASR_PORT','ASR_API_KEY','WHISPER_URL','WHISPER_MODEL','ASR_ALLOW_PUBLIC_BIND','ASR_CORS_ORIGINS'];
+  const keys=['ASR_HOST','ASR_PORT','ASR_API_KEY','WHISPER_URL','WHISPER_MODEL','ASR_CORS_ORIGINS'];
   const prev=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
   for(const key of keys)delete process.env[key];
   try{
@@ -27,8 +27,11 @@ test('ASR JSON configuration sets listener and engine while requiring explicit n
     delete process.env.ASR_CORS_ORIGINS;
     process.env.ASR_PORT='9009';assert.equal(loadConfig(file).port,9009);delete process.env.ASR_PORT;
     await writeFile(file,JSON.stringify({listen:{host:'0.0.0.0',port:8090}}));
-    assert.throws(()=>loadConfig(file),/ASR_ALLOW_PUBLIC_BIND/);
-    process.env.ASR_ALLOW_PUBLIC_BIND='1';assert.equal(loadConfig(file).host,'0.0.0.0');
+    assert.equal(loadConfig(file).host,'0.0.0.0');
+    await writeFile(file,JSON.stringify({listen:{host:'192.0.2.10',port:8090}}));
+    assert.equal(loadConfig(file).host,'192.0.2.10');
+    process.env.ASR_HOST='::';assert.equal(loadConfig(file).host,'::');delete process.env.ASR_HOST;
+    process.env.ASR_HOST='0.0.0.0';assert.equal(loadConfig(file).host,'0.0.0.0');delete process.env.ASR_HOST;
     await writeFile(file,'{bad');assert.throws(()=>loadConfig(file),/Invalid config/);
   }finally{
     for(const key of keys){if(prev[key]===undefined)delete process.env[key];else process.env[key]=prev[key];}
