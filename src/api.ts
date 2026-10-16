@@ -8,8 +8,10 @@ export function createAsrApi(adapter:InferenceAdapter, config:{apiKey:string;mod
     res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
     res.setHeader('Vary','Origin');
     const origin=req.headers.origin;
+    // An empty allowlist deliberately enables CORS for every browser Origin.
+    // A nonempty allowlist keeps strict exact-Origin matching.
     if(origin){
-      if(!(config.allowedOrigins||[]).includes(origin)){
+      if(config.allowedOrigins?.length && !config.allowedOrigins.includes(origin)){
         res.writeHead(403).end(JSON.stringify({error:{code:'origin_not_allowed'}}));return;
       }
       res.setHeader('Access-Control-Allow-Origin',origin);
