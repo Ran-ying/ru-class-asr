@@ -4,9 +4,9 @@
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 ENGINE_DIR="$HOME/.local/share/ru-class-asr/whisper.cpp"
-if [[ -v WHISPER_CPP_DIR ]];then ENGINE_DIR="$WHISPER_CPP_DIR";fi
+if [[ -n "$(printenv WHISPER_CPP_DIR 2>/dev/null || true)" ]];then ENGINE_DIR="$WHISPER_CPP_DIR";fi
 PORT=8080
-if [[ -v WHISPER_CPP_PORT ]];then PORT="$WHISPER_CPP_PORT";fi
+if [[ -n "$(printenv WHISPER_CPP_PORT 2>/dev/null || true)" ]];then PORT="$WHISPER_CPP_PORT";fi
 usage(){
   cat <<'HELP'
 RU-Class-ASR new Mac mini helper:
