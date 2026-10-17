@@ -3,7 +3,7 @@
 # Operates only on explicit user commands. No sudo, no persistent credentials.
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-ENGINE_DIR="$HOME/.local/share/ru-class-asr/whisper.cpp"
+ENGINE_DIR="$(dirname "$REPO")/whisper.cpp"
 if [[ -n "$(printenv WHISPER_CPP_DIR 2>/dev/null || true)" ]];then ENGINE_DIR="$WHISPER_CPP_DIR";fi
 PORT=8080
 if [[ -n "$(printenv WHISPER_CPP_PORT 2>/dev/null || true)" ]];then PORT="$WHISPER_CPP_PORT";fi
@@ -23,7 +23,7 @@ engine starts the whisper-server alone in the foreground (Ctrl+C to stop).
 run starts one whisper-server plus RU-Class-ASR. Requires ignored config.json
 with private API key, and npm ci + npm run build. Ctrl+C stops the engine.
 No public listener, TLS proxy, Homebrew, or service auto-start is configured.
-Optional overrides: WHISPER_CPP_DIR, WHISPER_CPP_PORT (default 8080).
+Default checkout: a sibling directory next to ru-class-asr (../whisper.cpp).\nExisting sibling whisper.cpp checkouts and downloaded GGML models are reused.\nThe former ~/.local/share/ru-class-asr/whisper.cpp is left untouched.\nOptional overrides: WHISPER_CPP_DIR, WHISPER_CPP_PORT (default 8080).
 HELP
 }
 fail(){ printf '[ERROR] %s\n' "$*" >&2; exit 1; }
