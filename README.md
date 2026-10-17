@@ -30,23 +30,28 @@ sh models/download-ggml-model.sh small
 ./build/bin/whisper-server --host 127.0.0.1 --port 8080 -m models/ggml-small.bin -l ru
 ```
 
-**全新 Mac mini 推荐流程：** 默认 `whisper.cpp` 放在 `ru-class-asr` 的**同级目录**（例如 `~/Projects/ru-class-asr` 与 `~/Projects/whisper.cpp`）；已经手工下载的同级仓库和 `models/ggml-small.bin` 将复用，不会重复下载。之前 `~/.local/share/ru-class-asr/whisper.cpp` 的旧目录不会自动迁移或删除，可通过 `WHISPER_CPP_DIR` 继续使用。
+**全新 Mac mini 推荐流程：** 安装脚本复用与 `ru-class-asr` 同级的 `whisper.cpp`。以后把模型及解码参数直接写在**本地忽略提交的 `config.json`**：
 
-不必手工猜测三个模型的启动参数；先执行
-`bash scripts/mac-whisper-models.sh bootstrap`，然后分别执行
-`download small`、`download medium`、`download large`。
-编辑私有 `config.json` 并构建 Node API 后，用
-`bash scripts/mac-whisper-models.sh run medium` 启动实际 medium
-权重及对应标记的 API；切换 large 或 small 时先停止旧进程。脚本不自动
-开公网端口，不会覆盖旧模型文件。详细说明见
-[三模型部署指南](docs/mac-multi-model-deployment.md)。
+```json
+"whisper": {
+  "url": "http://127.0.0.1:8080/inference",
+  "model": "small",
+  "temperature": 0,
+  "temperatureInc": 0.2,
+  "timeoutMs": 30000
+}
+```
 
-**解码可配：** `whisper.temperature`（默认 0）、
-`whisper.temperatureInc`（默认 **0**，保持此前行为）、
-`whisper.timeoutMs`（默认 30000）；可由环境变量
-`WHISPER_TEMPERATURE`、`WHISPER_TEMPERATURE_INC`、
-`WHISPER_TIMEOUT_MS` 覆盖。设置增量 0.2 才进入温度回退
-对照实验；**没有默认更改原先 small 模型的识别策略**。
+这是 `config.json` 的**一个字段片段**，不要用它覆盖完整配置（尤其不要覆盖你的 API Key / 监听等字段）。`temperatureInc: 0.2` 是实测对 C2 #76 有效、上游 whisper.cpp 常用的实验候选，**并非已证明全局最优**。在没有明确修改的情况下示例默认 `temperatureInc: 0` 仍保持旧版基线。
+
+```bash
+npm ci && npm run build
+bash scripts/mac-whisper-models.sh run
+```
+
+现在 `run` **不需要指定模型，也不向 Node 注入 WHISPER_MODEL/WHISPER_URL**；它根据 `config.json` 的 `whisper.model` 自动加载实际模型，并使用文件里的本机 `whisper.url` 端口。仍可 `run small`，但只用于核对配置是否确实选择了 small，若不匹配则报错。切换模型需编辑 `config.json` 的 `whisper.model`（`large-v3` 需写全名）并停止/重启服务。详细步骤见 [三模型部署指南](docs/mac-multi-model-deployment.md)。
+
+对该组合启动器，环境中若还有同名的 WHISPER_* / RU_CLASS_ASR_CONFIG 旧覆盖项将被拒绝，以确保本地文件是唯一生效来源。直接 `npm run dev` 的兼容环境变量支持仍保留给已有自动化部署，但个人 Mac 不需要用它们。
 
 ## 启动独立 API 服务
 
