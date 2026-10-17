@@ -14,6 +14,8 @@
 
 先确认使用的是本次部署修复代码提交及分支；验证 `git rev-parse HEAD`，不要把不同仓库的 SHA 当成同一个版本。不要修改两仓库旧版镜像协议文件。
 
+**默认目录布局已更新：** `mac-whisper-models.sh` 将 `whisper.cpp` 放在 `ru-class-asr` 同级的 `../whisper.cpp`。若同级已有完整 Git 仓库/模型文件，复用而不重新克隆/下载。旧版默认目录 `~/.local/share/ru-class-asr/whisper.cpp` 不再自动使用，也绝不删除或迁移；如需复用它，显式设置 `WHISPER_CPP_DIR`。现场检查两处已有模型以免重复下载。
+
 **目标：** 在新的 Mac mini Apple Silicon 上安装 Whisper 多语言 `small`、`medium`、`large-v3`，能够明确启用其中任意一个；验证温度回退参数对 Whisper 重复解码的作用，并比较不同模型的质量代理指标、实际耗时以及 16 GB 统一内存约束。此任务只验证本地 ASR 和 HTTP 层，不涉及 RU-Class P2 录音恢复与页面内播放。
 
 ## 1. 环境检查与安装
