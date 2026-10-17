@@ -6,6 +6,8 @@
 
 - [当前独立 HTTP API 架构、监听/CORS 语义与验收状态](docs/current-status.md)
 - [真实硬件和浏览器直连验收流程](docs/hardware-validation.md)
+- [全新 Mac mini：安装并切换 Whisper small / medium / large-v3](docs/mac-multi-model-deployment.md)
+- [DeepSeekHarness：全新 Mac mini 模型部署与 A/B/C/D 实验任务书](docs/deepseekharness-mac-mini-model-validation.md)
 - [维护者工作规范](AGENTS.md)
 
 历史 Worker/WebSocket 方案已退出当前启动路径。浏览器直连用户自选
@@ -26,6 +28,22 @@ cmake --build build --config Release -j --target whisper-server
 sh models/download-ggml-model.sh small
 ./build/bin/whisper-server --host 127.0.0.1 --port 8080 -m models/ggml-small.bin -l ru
 ```
+
+**全新 Mac mini 推荐流程：** 不必手工猜测三个模型的启动参数；先执行
+`bash scripts/mac-whisper-models.sh bootstrap`，然后分别执行
+`download small`、`download medium`、`download large`。
+编辑私有 `config.json` 并构建 Node API 后，用
+`bash scripts/mac-whisper-models.sh run medium` 启动实际 medium
+权重及对应标记的 API；切换 large 或 small 时先停止旧进程。脚本不自动
+开公网端口，不会覆盖旧模型文件。详细说明见
+[三模型部署指南](docs/mac-multi-model-deployment.md)。
+
+**解码可配：** `whisper.temperature`（默认 0）、
+`whisper.temperatureInc`（默认 **0**，保持此前行为）、
+`whisper.timeoutMs`（默认 30000）；可由环境变量
+`WHISPER_TEMPERATURE`、`WHISPER_TEMPERATURE_INC`、
+`WHISPER_TIMEOUT_MS` 覆盖。设置增量 0.2 才进入温度回退
+对照实验；**没有默认更改原先 small 模型的识别策略**。
 
 ## 启动独立 API 服务
 
