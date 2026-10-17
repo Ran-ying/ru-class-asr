@@ -142,7 +142,9 @@ run_both(){
   local configured configured_model configured_port requested_model
   configured="$(node -e '
     const fs=require("node:fs");
-    const config=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
+    let config;
+    try { config=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); }
+    catch { console.error("Unable to parse config.json; check local JSON syntax."); process.exit(1); }
     const model=config.whisper?.model;
     const endpoint=config.whisper?.url;
     if(!["small","medium","large-v3"].includes(model))
