@@ -25,6 +25,31 @@ the **active entrypoint** is `src/index.ts`.
   bounded one-at-a-time inference and HTTP 429 backpressure. No invented
   word timestamps, SSE, or claim of arbitrary audio-format support.
 
+## Multi-model Apple Silicon deployment and decoder settings (2026-10-17)
+
+`scripts/mac-whisper-models.sh` and
+`docs/mac-multi-model-deployment.md` cover explicit on-demand
+installation and serial operation of **multilingual** Whisper
+`small`, `medium`, and `large-v3` on a NEW Apple Silicon Mac mini.
+The convenient `large` name is an alias for actual `large-v3`
+weights. Never install all models as concurrent running servers:
+only one whisper.cpp engine should be loaded for each controlled test
+on the 16 GiB Mac mini.
+
+A new config `whisper.temperatureInc` defaults to **0** for strict
+old small-model behavior; explicit `0.2` enables a test of upstream
+fallback. `whisper.timeoutMs` supports slower large-model inference.
+The API-reported model ID is a configuration string, **NOT** proof that
+the weight was loaded. Verify whisper-server `-m` path, model SHA-256,
+engine revision, and live Metal backend logs on the host.
+
+The user delegated physical real-model testing to a separate
+DeepSeekHarness on a **fresh Mac mini** using
+`docs/deepseekharness-mac-mini-model-validation.md`. No human Russian
+listening is required; report acoustic accuracy as unverified.
+Never use the previously disabled cloud provider key, and never
+print a locally generated ASR API key.
+
 ## Change controls and verification
 
 - Never commit credentials, private DNS/hosts, raw classroom recordings,

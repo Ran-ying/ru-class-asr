@@ -3,7 +3,7 @@ import { createAsrApi } from './api.js';
 import { loadConfig } from './config.js';
 
 const config = loadConfig();
-const adapter = new WhisperHttp(config.whisperUrl);
+const adapter = new WhisperHttp(config.whisperUrl,config.whisperTimeoutMs,{temperature:config.temperature,temperatureInc:config.temperatureInc});
 const server = createAsrApi(adapter, {apiKey: config.apiKey, model: config.model,allowedOrigins:config.allowedOrigins});
 await adapter.infer(Buffer.alloc(16000 * 2));
 server.listen(config.port, config.host, () => console.log(JSON.stringify({

@@ -43,6 +43,31 @@ their browser and calls the ASR service directly.
   `0.0.0.0` alone does **not** provide HTTPS: configure a firewall and
   trusted TLS reverse proxy / private tunnel if remote browsers connect.
 
+## Fresh Apple Silicon multi-model operation (2026-10-17)
+
+New `scripts/mac-whisper-models.sh` builds upstream whisper.cpp with
+Metal requested, downloads GGML multilingual `small`, `medium`,
+and `large-v3` weights and starts **one** selected model's
+whisper-server plus the independent RU-Class-ASR API as a local
+foreground pair. `large` is a user-facing alias for `large-v3`.
+No existing service is modified, no default remote listener or
+service-autostart is created, and no model is actually installed by
+GitHub CI.
+
+New `whisper.temperature` / `whisper.temperatureInc` /
+`whisper.timeoutMs` config fields are verified by local tests. The
+previous decoder policy (0 / 0 increment, 30-second timeout) is
+preserved by default for fair historical comparison. The Mac operator
+can explicitly compare small 0/0 with small 0/0.2, then medium and
+large-v3 at 0/0.2. This does not prove that fallback was invoked,
+that Metal is active or that a larger model improves the actual
+spoken-word transcript.
+
+See [Mac multi-model deployment](mac-multi-model-deployment.md)
+and [DeepSeekHarness fresh-host test brief](deepseekharness-mac-mini-model-validation.md).
+The test owner has opted out of human Russian listening; report
+`SPEECH_ACCURACY_UNVERIFIED`. The previous Alibaba key is disabled.
+
 ## Local verification
 
 ```bash

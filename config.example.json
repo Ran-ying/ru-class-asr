@@ -6,7 +6,10 @@
   "apiKey": "",
   "whisper": {
     "url": "http://127.0.0.1:8080/inference",
-    "model": "small"
+    "model": "small",
+    "temperature": 0,
+    "temperatureInc": 0,
+    "timeoutMs": 30000
   },
   "cors": {
     "allowedOrigins": []
