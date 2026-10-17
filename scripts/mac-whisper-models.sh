@@ -14,6 +14,7 @@ RU-Class-ASR new Mac mini helper:
   bash scripts/mac-whisper-models.sh bootstrap
   bash scripts/mac-whisper-models.sh download small|medium|large|all
   bash scripts/mac-whisper-models.sh list
+  bash scripts/mac-whisper-models.sh verify small|medium|large|all
   bash scripts/mac-whisper-models.sh engine small|medium|large
   bash scripts/mac-whisper-models.sh run small|medium|large
 small/medium/large are multilingual; large maps to large-v3.
@@ -23,7 +24,11 @@ engine starts the whisper-server alone in the foreground (Ctrl+C to stop).
 run starts one whisper-server plus RU-Class-ASR. Requires ignored config.json
 with private API key, and npm ci + npm run build. Ctrl+C stops the engine.
 No public listener, TLS proxy, Homebrew, or service auto-start is configured.
-Default checkout: a sibling directory next to ru-class-asr (../whisper.cpp).\nExisting sibling whisper.cpp checkouts and downloaded GGML models are reused.\nThe former ~/.local/share/ru-class-asr/whisper.cpp is left untouched.\nOptional overrides: WHISPER_CPP_DIR, WHISPER_CPP_PORT (default 8080).
+Default checkout: a sibling directory next to ru-class-asr (../whisper.cpp).
+Existing sibling whisper.cpp checkouts and downloaded GGML models are reused.
+Missing/truncated/tampered models fail verification without deletion.
+The former ~/.local/share/ru-class-asr/whisper.cpp is left untouched.
+Optional overrides: WHISPER_CPP_DIR, WHISPER_CPP_PORT (default 8080).
 HELP
 }
 fail(){ printf '[ERROR] %s\n' "$*" >&2; exit 1; }
@@ -48,12 +53,29 @@ engine_ready(){
   [[ -x "$ENGINE_DIR/build/bin/whisper-server" ]] ||
     fail "Engine is not built. Run bootstrap."
 }
+model_expected(){
+  # Expected bytes and SHA-256 from official ggerganov/whisper.cpp GGML
+  # multilingual weights (verified on the public upstream model pages).
+  case "$1" in
+    small) expected_bytes=487601967; expected_sha=1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b;;
+    medium) expected_bytes=1533763059; expected_sha=6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208;;
+    large-v3) expected_bytes=3095033483; expected_sha=64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2;;
+    *) fail "Unsupported model checksum profile: $1";;
+  esac
+}
 model_ready(){
-  local path="$ENGINE_DIR/models/ggml-$1.bin" size
+  local path="$ENGINE_DIR/models/ggml-$1.bin" expected_bytes expected_sha size actual_sha
   [[ -f "$path" && ! -L "$path" ]] ||
     fail "Missing weight file; run download first."
-  size="$(stat -f %z "$path")"
-  (( size > 100000000 )) || fail "Model binary seems incomplete."
+  model_expected "$1"
+  size="$(stat -f %z "$path")" || fail "Could not read model size."
+  [[ "$size" == "$expected_bytes" ]] ||
+    fail "Incorrect/incomplete $1 model: $size bytes, expected $expected_bytes. The existing file was NOT deleted."
+  actual_sha="$(shasum -a 256 "$path" | awk '{print $1}')" ||
+    fail "Failed to hash $1 model."
+  [[ "$actual_sha" == "$expected_sha" ]] ||
+    fail "SHA256 mismatch for $1; existing file was NOT overwritten or deleted."
+  echo "[PASS] Verified $1: exact byte count and official SHA-256."
 }
 validate_port(){
   [[ "$PORT" =~ ^[0-9]+$ ]] && (( PORT>=1024 && PORT<=65535 )) ||
@@ -92,7 +114,7 @@ list_models(){
   local id
   for id in small medium large-v3;do
     if [[ -f "$ENGINE_DIR/models/ggml-$id.bin" ]];then
-      echo "$id : installed"
+      echo "$id : present (integrity not checked; use 'verify $id')"
     else echo "$id : absent";fi
   done
 }
@@ -116,13 +138,19 @@ run_both(){
     [[ -z "$(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)" ]] ||
       fail "Port already in use; stop the previous inference engine."
   fi
-  local pid="" count
+  local engine_pid="" api_pid="" count
   umask 077
   cleanup(){
-    if [[ -n "$pid" ]];then
-      kill "$pid" 2>/dev/null || true
-      wait "$pid" 2>/dev/null || true
-    fi
+    # Both children are started directly by this shell. A SIGTERM sent to
+    # the wrapper must not leave either the Node API or engine behind.
+    trap - EXIT INT TERM
+    local child
+    for child in "$api_pid" "$engine_pid";do
+      if [[ -n "$child" ]];then kill "$child" 2>/dev/null || true;fi
+    done
+    for child in "$api_pid" "$engine_pid";do
+      if [[ -n "$child" ]];then wait "$child" 2>/dev/null || true;fi
+    done
   }
   trap cleanup EXIT
   trap 'exit 130' INT
@@ -130,21 +158,25 @@ run_both(){
   "$ENGINE_DIR/build/bin/whisper-server" \
     --host 127.0.0.1 --port "$PORT" \
     -m "$ENGINE_DIR/models/ggml-$1.bin" -l ru &
-  pid="$!"
+  engine_pid="$!"
   echo "[INFO] Starting $1. Waiting for local engine (up to 240 seconds)."
   local ready=no
   for ((count=0;count<240;count++));do
-    kill -0 "$pid" 2>/dev/null || fail "Engine exited during model load."
+    kill -0 "$engine_pid" 2>/dev/null || fail "Engine exited during model load."
     if curl --noproxy '*' --silent --fail --max-time 2 \
       "http://127.0.0.1:$PORT/" -o /dev/null;then ready=yes;break;fi
     sleep 1
   done
   [[ "$ready" == yes ]] || fail "Engine did not become ready."
   echo "[PASS] Model loaded. Starting authenticated RU-Class-ASR: $1"
-  (cd "$REPO" &&
-    WHISPER_MODEL="$1" \
-    WHISPER_URL="http://127.0.0.1:$PORT/inference" \
-    node dist/src/index.js)
+  (
+    cd "$REPO"
+    exec env WHISPER_MODEL="$1" \
+      WHISPER_URL="http://127.0.0.1:$PORT/inference" \
+      node dist/src/index.js
+  ) &
+  api_pid="$!"
+  wait "$api_pid"
 }
 main(){
   local action=help id
@@ -160,6 +192,12 @@ main(){
         for id in small medium large-v3;do download_one "$id";done
       else download_one "$1";fi;;
     list) (($#==0))||fail "Unexpected arguments.";list_models;;
+    verify)
+      (($#==1))||fail "verify needs a model or all"
+      need shasum
+      if [[ "$1" == all ]];then
+        for id in small medium large-v3;do model_ready "$id";done
+      else model_ready "$(model_name "$1")";fi;;
     engine) (($#==1))||fail "engine needs model";engine_foreground "$(model_name "$1")";;
     run) (($#==1))||fail "run needs model";run_both "$(model_name "$1")";;
     *) fail "Unknown command; use --help";;

@@ -73,6 +73,33 @@ and [DeepSeekHarness fresh-host test brief](deepseekharness-mac-mini-model-valid
 The test owner has opted out of human Russian listening; report
 `SPEECH_ACCURACY_UNVERIFIED`. The previous Alibaba key is disabled.
 
+## Mac mini M4 same-audio multi-model findings (operator report, 2026-10-17)
+
+The independent [M4 four-group comparison](m4-2026-10-17-model-comparison.md)
+supersedes **only** the older assumption that M4 runtime Metal evidence
+was missing; the supplied newer engine log summary reports an active MTL0
+backend. In one matched 8-second private C2 #76 window, small/0/0
+returned 164 tokens / 7 unique / 53 max trigram repeats. The same
+small weights with `temperatureInc=0.2` yielded 13 / 12 / 1,
+**with an observed temperature fallback**. Medium and large-v3 also
+removed this extreme cycle in the supplied focus samples but their
+one-request-per-second latency is less favorable; model-level looping
+is **not fully eliminated** (small/0.2 still repeated at another
+alignment with zero actual fallback count).
+
+This was a local ASR and HTTP validation, not a full new 121/106-window
+caption replay, ten-minute real microphone session, remote browser CORS,
+or a WER measurement. Keep `SPEECH_ACCURACY_UNVERIFIED`, keep
+RU-Class PR #25 default OFF, and do not silently change the default
+`temperatureInc=0` for users. Consider an explicit 0.2 trial after
+a controlled local rollout.
+
+The macOS deploy helper now verifies the **exact upstream model byte
+count and SHA-256** for `small`, `medium` and `large-v3` before
+loading, and handles TERM by cleaning up the Node and engine children
+it owns. `list` merely reports file presence; `verify MODEL` checks
+integrity. Existing files are not deleted on failed validation.
+
 ## Local verification
 
 ```bash

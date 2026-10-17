@@ -88,7 +88,17 @@ bash scripts/mac-whisper-models.sh download large
 bash scripts/mac-whisper-models.sh list
 ```
 
-下载经上游 `models/download-ggml-model.sh`，不是自行构造任意模型链接。已有本地文件不会被覆盖；脚本仅检查存在性与大致文件大小，**不能证明未被损坏**。请在本机私下记录每个实际文件的 `shasum -a 256`，必要时与上游公开模型哈希对照。
+下载经上游 `models/download-ggml-model.sh`，不是自行构造任意模型链接。已有本地文件不会被覆盖。现在在 `download` 完成和 `run` 启动之前，会核验这三个官方多语言模型的**精确文件字节数和 SHA-256**（官方 ggerganov/whisper.cpp）。`list` 只说明文件存在，**不代表完整性通过**。可明确执行：
+
+```bash
+bash scripts/mac-whisper-models.sh verify small
+bash scripts/mac-whisper-models.sh verify medium
+bash scripts/mac-whisper-models.sh verify large
+# 或统一校验：
+bash scripts/mac-whisper-models.sh verify all
+```
+
+若发现不完整或 SHA 不符，脚本会拒绝运行并保留现有文件供人工处理，不会自动删除它或错误报告“可用”。切勿在未核验前自行改名为有效 GGML 文件。
 
 ## 3. 安装本项目 API 并生成本机专用 Key
 
@@ -129,7 +139,7 @@ WHISPER_TEMPERATURE_INC=0.2 WHISPER_TIMEOUT_MS=120000 \
   bash scripts/mac-whisper-models.sh run large
 ```
 
-`run` 将 `WHISPER_MODEL` 仅注入**本次** ASR 进程，和实际引擎二进制选择保持一致。它不会修改本机的 `config.json`，也不会切换正在运行的录音会话。内部 whisper-server 强制绑定 `127.0.0.1:8080`，API 保持配置中的 `listen.host`（建议本地 `127.0.0.1:8090`）。`run` 不允许引擎端口已经被其他程序占用。按 Ctrl+C 退出后才切换模型。
+`run` 将 `WHISPER_MODEL` 仅注入**本次** ASR 进程，和实际引擎二进制选择保持一致。它不会修改本机的 `config.json`，也不会切换正在运行的录音会话。内部 whisper-server 强制绑定 `127.0.0.1:8080`，API 保持配置中的 `listen.host`（建议本地 `127.0.0.1:8090`）。`run` 不允许引擎端口已经被其他程序占用。按 Ctrl+C 退出后才切换模型。包装脚本同时追踪它启动的 Node 和 Whisper 子进程，收到 INT/TERM 时均清理；这不代表强制 SIGKILL 或断电后可自动回收进程。
 
 若只希望运行推理引擎（例如想分两个终端手动部署 API），使用：
 
