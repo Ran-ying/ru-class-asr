@@ -29,7 +29,9 @@ sh models/download-ggml-model.sh small
 ./build/bin/whisper-server --host 127.0.0.1 --port 8080 -m models/ggml-small.bin -l ru
 ```
 
-**全新 Mac mini 推荐流程：** 不必手工猜测三个模型的启动参数；先执行
+**全新 Mac mini 推荐流程：** 默认 `whisper.cpp` 放在 `ru-class-asr` 的**同级目录**（例如 `~/Projects/ru-class-asr` 与 `~/Projects/whisper.cpp`）；已经手工下载的同级仓库和 `models/ggml-small.bin` 将复用，不会重复下载。之前 `~/.local/share/ru-class-asr/whisper.cpp` 的旧目录不会自动迁移或删除，可通过 `WHISPER_CPP_DIR` 继续使用。
+
+不必手工猜测三个模型的启动参数；先执行
 `bash scripts/mac-whisper-models.sh bootstrap`，然后分别执行
 `download small`、`download medium`、`download large`。
 编辑私有 `config.json` 并构建 Node API 后，用
