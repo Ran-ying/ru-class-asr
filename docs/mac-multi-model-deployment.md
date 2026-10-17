@@ -60,10 +60,16 @@ bash scripts/mac-whisper-models.sh bootstrap
 此命令会把官方 whisper.cpp 仓库克隆到：
 
 ```text
-~/.local/share/ru-class-asr/whisper.cpp
+<你的项目父目录>/whisper.cpp
 ```
 
-随后以 `-DGGML_METAL=ON` 构建 `whisper-server`。如该目录已经存在，仅保留原 checkout，不会擅自更新或覆盖。自定义模型位置：
+例如你的目录是 `~/Projects/ru-class-asr`，默认会安装到 `~/Projects/whisper.cpp`，两个项目并列，不会放进 `ru-class-asr` 内部。
+
+随后以 `-DGGML_METAL=ON` 构建 `whisper-server`。**如果同级目录已有自己手工安装的 whisper.cpp 仓库及 `models/ggml-small.bin`，直接复用该 checkout 和已有权重**，无需重复克隆或下载。
+
+以前的脚本曾使用 `~/.local/share/ru-class-asr/whisper.cpp`。本次只修改默认位置，**不会自动迁移、删除或覆盖旧目录**。如果你要继续使用那个位置，可在运行前设置 `WHISPER_CPP_DIR="$HOME/.local/share/ru-class-asr/whisper.cpp"`。如果你的旧仓库在其他位置，同样可以用 `WHISPER_CPP_DIR` 指定。
+
+如果同级目录已存在但不是 Git checkout，脚本会报错而非覆盖；如果同级模型文件完整，`download small` 会提示已存在并跳过。自定义模型位置：
 
 ```bash
 export WHISPER_CPP_DIR="$HOME/your-chosen-directory/whisper.cpp"

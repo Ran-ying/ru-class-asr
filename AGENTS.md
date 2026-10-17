@@ -34,7 +34,12 @@ installation and serial operation of **multilingual** Whisper
 The convenient `large` name is an alias for actual `large-v3`
 weights. Never install all models as concurrent running servers:
 only one whisper.cpp engine should be loaded for each controlled test
-on the 16 GiB Mac mini.
+on the 16 GiB Mac mini. The macOS helper defaults to the
+`whisper.cpp` checkout **beside** `ru-class-asr`, not a hidden
+per-user `~/.local/share` checkout. Existing sibling Git checkouts
+and their GGML model files are reused; never silently delete or move
+an older hidden installation. `WHISPER_CPP_DIR` explicitly overrides
+this layout.
 
 A new config `whisper.temperatureInc` defaults to **0** for strict
 old small-model behavior; explicit `0.2` enables a test of upstream
