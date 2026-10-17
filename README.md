@@ -8,6 +8,7 @@
 - [真实硬件和浏览器直连验收流程](docs/hardware-validation.md)
 - [全新 Mac mini：安装并切换 Whisper small / medium / large-v3](docs/mac-multi-model-deployment.md)
 - [DeepSeekHarness：全新 Mac mini 模型部署与 A/B/C/D 实验任务书](docs/deepseekharness-mac-mini-model-validation.md)
+- [M4 三模型真实音频对照：解码回退触发、性能与限制](docs/m4-2026-10-17-model-comparison.md)
 - [维护者工作规范](AGENTS.md)
 
 历史 Worker/WebSocket 方案已退出当前启动路径。浏览器直连用户自选
