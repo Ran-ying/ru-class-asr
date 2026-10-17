@@ -16,13 +16,15 @@ RU-Class-ASR new Mac mini helper:
   bash scripts/mac-whisper-models.sh list
   bash scripts/mac-whisper-models.sh verify small|medium|large|all
   bash scripts/mac-whisper-models.sh engine small|medium|large
-  bash scripts/mac-whisper-models.sh run small|medium|large
+  bash scripts/mac-whisper-models.sh run [small|medium|large]
 small/medium/large are multilingual; large maps to large-v3.
 bootstrap clones/builds whisper.cpp and refuses to auto-update it.
 download uses whisper.cpp's official GGML download script; models coexist.
 engine starts the whisper-server alone in the foreground (Ctrl+C to stop).
-run starts one whisper-server plus RU-Class-ASR. Requires ignored config.json
-with private API key, and npm ci + npm run build. Ctrl+C stops the engine.
+run reads whisper.model and whisper.url FROM ignored config.json, starts the
+matching whisper-server and the Node API; optional MODEL must match that file.
+No model/URL environment injection. Requires a private API key, npm ci + build.
+Ctrl+C stops both services.
 No public listener, TLS proxy, Homebrew, or service auto-start is configured.
 Default checkout: a sibling directory next to ru-class-asr (../whisper.cpp).
 Existing sibling whisper.cpp checkouts and downloaded GGML models are reused.
@@ -125,13 +127,55 @@ engine_foreground(){
     -m "$ENGINE_DIR/models/ggml-$1.bin" -l ru
 }
 run_both(){
-  platform;validate_port;engine_ready;model_ready "$1"
+  platform
   need node;need npm
+  [[ -f "$REPO/config.json" ]] ||
+    fail "Create ignored config.json with an API Key and whisper.model/whisper.url."
+  # This path is file-driven: do not let inherited environment overrides
+  # silently change the model, endpoint or decode policy.
+  local variable
+  for variable in WHISPER_MODEL WHISPER_URL WHISPER_TEMPERATURE WHISPER_TEMPERATURE_INC WHISPER_TIMEOUT_MS RU_CLASS_ASR_CONFIG;do
+    if printenv "$variable" >/dev/null 2>&1;then
+      fail "Unset $variable before run; put settings in config.json."
+    fi
+  done
+  local configured configured_model configured_port requested_model
+  configured="$(node -e '
+    const fs=require("node:fs");
+    let config;
+    try { config=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); }
+    catch { console.error("Unable to parse config.json; check local JSON syntax."); process.exit(1); }
+    const model=config.whisper?.model;
+    const endpoint=config.whisper?.url;
+    if(!["small","medium","large-v3"].includes(model))
+      throw Error("config.json whisper.model must be small, medium or large-v3");
+    if(typeof endpoint!=="string")
+      throw Error("config.json whisper.url must be a local engine URL");
+    const url=new URL(endpoint);
+    if(url.protocol!=="http:" || url.hostname!=="127.0.0.1" ||
+       url.pathname!=="/inference" || url.username || url.password ||
+       url.search || url.hash)
+      throw Error("config.json whisper.url must be http://127.0.0.1:PORT/inference");
+    const port=Number(url.port||"80");
+    if(!Number.isInteger(port)||port<1024||port>65535)
+      throw Error("Invalid local whisper-server port");
+    process.stdout.write(model+"|"+port);
+  ' "$REPO/config.json")" || fail "Invalid config.json model/URL."
+  IFS='|' read -r configured_model configured_port <<< "$configured"
+  [[ -n "$configured_model" && -n "$configured_port" ]] ||
+    fail "Incomplete config.json model/port."
+  if [[ -n "${1:-}" ]];then
+    requested_model="$(model_name "$1")"
+    [[ "$configured_model" == "$requested_model" ]] ||
+      fail "config.json selects $configured_model, but run requested $requested_model. Edit config.json first."
+  fi
+  PORT="$configured_port"
+  validate_port
+  engine_ready
+  model_ready "$configured_model"
   node -e 'const v=process.versions.node.split(".").map(Number);
     if(v[0]<22 || (v[0]===22&&v[1]<6))process.exit(1)' ||
     fail "Node.js 22.6+ required."
-  [[ -f "$REPO/config.json" ]] ||
-    fail "Create ignored config.json with an API Key (at least 24 characters)."
   [[ -f "$REPO/dist/src/index.js" ]] ||
     fail "Run npm ci and npm run build before activating a model."
   if command -v lsof >/dev/null 2>&1;then
@@ -157,9 +201,9 @@ run_both(){
   trap 'exit 143' TERM
   "$ENGINE_DIR/build/bin/whisper-server" \
     --host 127.0.0.1 --port "$PORT" \
-    -m "$ENGINE_DIR/models/ggml-$1.bin" -l ru &
+    -m "$ENGINE_DIR/models/ggml-$configured_model.bin" -l ru &
   engine_pid="$!"
-  echo "[INFO] Starting $1. Waiting for local engine (up to 240 seconds)."
+  echo "[INFO] Starting $configured_model from config.json. Waiting for local engine (up to 240 seconds)."
   local ready=no
   for ((count=0;count<240;count++));do
     kill -0 "$engine_pid" 2>/dev/null || fail "Engine exited during model load."
@@ -168,12 +212,10 @@ run_both(){
     sleep 1
   done
   [[ "$ready" == yes ]] || fail "Engine did not become ready."
-  echo "[PASS] Model loaded. Starting authenticated RU-Class-ASR: $1"
+  echo "[PASS] Model loaded. Starting RU-Class-ASR using config.json: $configured_model"
   (
     cd "$REPO"
-    exec env WHISPER_MODEL="$1" \
-      WHISPER_URL="http://127.0.0.1:$PORT/inference" \
-      node dist/src/index.js
+    exec node dist/src/index.js
   ) &
   api_pid="$!"
   wait "$api_pid"
@@ -199,7 +241,7 @@ main(){
         for id in small medium large-v3;do model_ready "$id";done
       else model_ready "$(model_name "$1")";fi;;
     engine) (($#==1))||fail "engine needs model";engine_foreground "$(model_name "$1")";;
-    run) (($#==1))||fail "run needs model";run_both "$(model_name "$1")";;
+    run) (($#<=1))||fail "run accepts at most one model";run_both "${1:-}";;
     *) fail "Unknown command; use --help";;
   esac
 }

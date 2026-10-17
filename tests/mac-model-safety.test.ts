@@ -26,7 +26,7 @@ function layout() {
   copyFileSync(source,script);
   const model=join(engine,'models','ggml-small.bin');
   writeFileSync(model,'DO-NOT-DELETE-THIS-LOCAL-MODEL');
-  writeFileSync(join(repo,'config.json'),'{"apiKey":"not-a-real-secret"}');
+  writeFileSync(join(repo,'config.json'),'{"apiKey":"not-a-real-secret","whisper":{"model":"small","url":"http://127.0.0.1:8080/inference"}}');
   writeFileSync(join(repo,'dist','src','index.js'),'// stub');
   const env:NodeJS.ProcessEnv={...process.env,WHISPER_CPP_DIR:engine,
     PATH:bin+':'+process.env.PATH};
@@ -77,8 +77,12 @@ test('TERM to wrapper cleans up both owned child processes, without touching oth
     const pEngine=join(t.root,'engine.pid'),pApi=join(t.root,'api.pid');
     executable(join(t.engine,'build','bin','whisper-server'),
       'echo $$ > "'+pEngine+'"\nexec sleep 120');
+    const envProof=join(t.root,'api-env-check');
     executable(join(t.bin,'node'),
-      'if [ "$1" = "-e" ]; then exit 0; fi\necho $$ > "'+pApi+'"\nexec sleep 120');
+      'if [ "$1" = "-e" ]; then exec '+JSON.stringify(process.execPath)+' "$@"; fi\n'+
+      'echo $$ > "'+pApi+'"\n'+
+      'if [ -z "${WHISPER_MODEL:-}" ] && [ -z "${WHISPER_URL:-}" ]; then echo config_only > "'+envProof+'"; else echo unexpected_env > "'+envProof+'"; fi\n'+
+      'exec sleep 120');
     wrapper=spawn('bash',[t.script,'run','small'],{cwd:t.repo,env:t.env,stdio:'ignore'});
     let started=false;
     for(let i=0;i<100;i++){
@@ -86,6 +90,7 @@ test('TERM to wrapper cleans up both owned child processes, without touching oth
       await new Promise(r=>setTimeout(r,20));
     }
     assert.equal(started,true,'Both fake processes should start');
+    assert.equal(readFileSync(envProof,'utf8').trim(),'config_only','run must not inject model/URL environment overrides');
     enginePid=Number(readFileSync(pEngine,'utf8').trim());
     apiPid=Number(readFileSync(pApi,'utf8').trim());
     wrapper.kill('SIGTERM');

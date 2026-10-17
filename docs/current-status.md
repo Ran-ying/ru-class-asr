@@ -100,6 +100,25 @@ loading, and handles TERM by cleaning up the Node and engine children
 it owns. `list` merely reports file presence; `verify MODEL` checks
 integrity. Existing files are not deleted on failed validation.
 
+### Configuration-first Mac start
+
+On the Mac mini, edit the private `config.json` `whisper.model`,
+`whisper.url`, `whisper.temperatureInc` and `whisper.timeoutMs`
+directly, then run `bash scripts/mac-whisper-models.sh run`.
+The wrapper reads that file to choose the loaded GGML model and
+local inference port, starts Node **without** WHISPER_MODEL/URL
+environment injection, and refuses mismatched optional `run MODEL`
+arguments or inherited whisper-related overrides. Model changes require
+a stop/restart. The standalone `npm run dev` environment override
+API remains available for backwards compatibility but is not the
+preferred Mac workflow.
+
+The operator's small + 0.2 test only compared increment **0 versus
+0.2**, not a full threshold/accuracy sweep. There is no evidence
+that 0.2 is optimal across diverse Russian audio, nor a validated
+acoustic WER; leave default config at 0 until explicitly changed
+by the operator.
+
 ## Local verification
 
 ```bash
