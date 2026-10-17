@@ -74,7 +74,7 @@ test('bootstrap reuses an existing sibling whisper.cpp without cloning over it',
       writeFileSync(join(bin,name),data);
       chmodSync(join(bin,name),0o755);
     }
-    const env={...process.env,PATH:bin+':'+process.env.PATH};
+    const env:NodeJS.ProcessEnv={...process.env,PATH:bin+':'+process.env.PATH};
     delete env.WHISPER_CPP_DIR;
     const result=spawnSync('bash',[copied,'bootstrap'],{encoding:'utf8',env});
     assert.equal(result.status,0,result.stderr);
