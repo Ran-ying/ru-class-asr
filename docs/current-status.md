@@ -45,7 +45,12 @@ their browser and calls the ASR service directly.
 
 ## Fresh Apple Silicon multi-model operation (2026-10-17)
 
-New `scripts/mac-whisper-models.sh` builds upstream whisper.cpp with
+New `scripts/mac-whisper-models.sh` defaults to a sibling
+`../whisper.cpp` checkout alongside the `ru-class-asr` repository,
+reusing any preexisting sibling clone and GGML weights. A prior hidden
+`~/.local/share/ru-class-asr/whisper.cpp` checkout is left untouched;
+set `WHISPER_CPP_DIR` to opt into a different engine location.
+The helper builds upstream whisper.cpp with
 Metal requested, downloads GGML multilingual `small`, `medium`,
 and `large-v3` weights and starts **one** selected model's
 whisper-server plus the independent RU-Class-ASR API as a local
