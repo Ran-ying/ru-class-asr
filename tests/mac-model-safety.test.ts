@@ -77,8 +77,12 @@ test('TERM to wrapper cleans up both owned child processes, without touching oth
     const pEngine=join(t.root,'engine.pid'),pApi=join(t.root,'api.pid');
     executable(join(t.engine,'build','bin','whisper-server'),
       'echo $$ > "'+pEngine+'"\nexec sleep 120');
+    const envProof=join(t.root,'api-env-check');
     executable(join(t.bin,'node'),
-      'if [ "$1" = "-e" ]; then echo "small|8080"; exit 0; fi\necho $ > "'+pApi+'"\nexec sleep 120');
+      'if [ "$1" = "-e" ]; then exec '+JSON.stringify(process.execPath)+' "$@"; fi\n'+
+      'echo $$ > "'+pApi+'"\n'+
+      'if [ -z "${WHISPER_MODEL:-}" ] && [ -z "${WHISPER_URL:-}" ]; then echo config_only > "'+envProof+'"; else echo unexpected_env > "'+envProof+'"; fi\n'+
+      'exec sleep 120');
     wrapper=spawn('bash',[t.script,'run','small'],{cwd:t.repo,env:t.env,stdio:'ignore'});
     let started=false;
     for(let i=0;i<100;i++){
@@ -86,6 +90,7 @@ test('TERM to wrapper cleans up both owned child processes, without touching oth
       await new Promise(r=>setTimeout(r,20));
     }
     assert.equal(started,true,'Both fake processes should start');
+    assert.equal(readFileSync(envProof,'utf8').trim(),'config_only','run must not inject model/URL environment overrides');
     enginePid=Number(readFileSync(pEngine,'utf8').trim());
     apiPid=Number(readFileSync(pApi,'utf8').trim());
     wrapper.kill('SIGTERM');
