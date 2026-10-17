@@ -118,37 +118,49 @@ chmod 600 config.json
 - `cors.allowedOrigins` 需要面向网页时再按真实 HTTPS 来源填写。空数组默认允许任意 Origin，但仍需要 Bearer 认证；这不是生产环境的推荐暴露方式。
 - `whisper.temperature=0`，`whisper.temperatureInc=0` 保留以前的解码基线，`whisper.timeoutMs=30000` 是原请求超时。
 
-这些值也可在**进程启动之前**由 `WHISPER_TEMPERATURE`、`WHISPER_TEMPERATURE_INC`、`WHISPER_TIMEOUT_MS` 覆盖。增量合法范围是 0–1，超时可设为 1000–300000 毫秒。首次验证应保留 0/0 作基线；后续再测试 0/0.2。
+**参数直接写在本地 `config.json` 里**。重新启动 Node 后生效，无需在终端输入环境变量。为了确保同时启动两层服务时模型、端口与解码参数一致，`run` 使用 `config.json` 作为来源；直接运行 API 的旧环境变量覆盖方式仍用于其他部署场景，但不建议在本机模型实验中混用。若旧终端设置过同名 WHISPER_* 覆盖项，`run` 会提示先取消设置，避免静默覆盖文件。
 
-## 4. 明确启用一个模型（同时启动引擎 + ASR API）
+## 4. 通过 config.json 明确启用一个模型
 
-```bash
-# 终端 A：启用 small，直到 Ctrl+C 退出
-bash scripts/mac-whisper-models.sh run small
+在 `ru-class-asr/config.json` 中只修改已有 `whisper` 区域（不要覆盖本机 API Key 或其它字段）：
 
-# 另一次实验，在同一终端先停止上一次进程后：
-WHISPER_TEMPERATURE_INC=0.2 \
-  bash scripts/mac-whisper-models.sh run small
-
-# 在停止后启用 medium（适当增加超时）
-WHISPER_TEMPERATURE_INC=0.2 WHISPER_TIMEOUT_MS=90000 \
-  bash scripts/mac-whisper-models.sh run medium
-
-# 在停止后启用 large-v3
-WHISPER_TEMPERATURE_INC=0.2 WHISPER_TIMEOUT_MS=120000 \
-  bash scripts/mac-whisper-models.sh run large
+```json
+"whisper": {
+  "url": "http://127.0.0.1:8080/inference",
+  "model": "small",
+  "temperature": 0,
+  "temperatureInc": 0.2,
+  "timeoutMs": 30000
+}
 ```
 
-`run` 将 `WHISPER_MODEL` 仅注入**本次** ASR 进程，和实际引擎二进制选择保持一致。它不会修改本机的 `config.json`，也不会切换正在运行的录音会话。内部 whisper-server 强制绑定 `127.0.0.1:8080`，API 保持配置中的 `listen.host`（建议本地 `127.0.0.1:8090`）。`run` 不允许引擎端口已经被其他程序占用。按 Ctrl+C 退出后才切换模型。包装脚本同时追踪它启动的 Node 和 Whisper 子进程，收到 INT/TERM 时均清理；这不代表强制 SIGKILL 或断电后可自动回收进程。
+这是配置**片段**，不是单独可用的完整 JSON 文件。参数说明：
 
-若只希望运行推理引擎（例如想分两个终端手动部署 API），使用：
+- `whisper.model`：`small`、`medium` 或 `large-v3`，决定本次启动的真实权重文件和 Node API 模型 ID；
+- `whisper.temperatureInc`：旧版 0；0.2 在 C2 #76 上实际触发了回退，但不能认定最优；
+- `whisper.temperature`：初始解码温度，先固定为 0 以保持可比性；
+- `whisper.timeoutMs`：Node 等待 Whisper 推理返回的超时毫秒数；medium/large 可调整为 90000/120000 用于离线对照；
+- `whisper.url`：组合启动器自动绑定的本机引擎端口；出于引擎安全，组合启动暂只允许 `http://127.0.0.1:PORT/inference`。
+
+配置完后：
 
 ```bash
-bash scripts/mac-whisper-models.sh engine medium
-# 然后新终端执行 WHISPER_MODEL=medium npm run dev
+npm ci
+npm run build
+bash scripts/mac-whisper-models.sh run
 ```
 
-**不能只把 API 的 `WHISPER_MODEL` 改成 `medium` 就声称切换了真正的模型**：底层 whisper-server 是另一个进程，必须实际加载 `ggml-medium.bin`。本项目 `GET /v1/models` 只是报告本次 API 配置标签，模型权重仍以本机引擎启动参数和真实文件哈希为准。
+这会启动 `config.json` 中指定的模型及对应 Node API。以后切换模型时，先使用 Ctrl+C 停止，再编辑 `config.json` 中的 `whisper.model`，然后运行同一条 `run` 命令。不需要 `WHISPER_MODEL=...` 等前缀。
+
+`run small` / `run medium` / `run large` 仍可使用，但只会**验证**实际配置的模型与参数一致；指定模型与文件中的 `whisper.model` 不符时主动拒绝启动，而不会覆盖它。`large` 操作名对应文件里的 `large-v3`。
+
+使用 `run` 时不得在进程环境中另外设置 WHISPER_MODEL / WHISPER_URL / WHISPER_TEMPERATURE / WHISPER_TEMPERATURE_INC / WHISPER_TIMEOUT_MS / RU_CLASS_ASR_CONFIG；这样的启动会提示清理旧覆盖值。直接单独使用 `npm run dev` 的传统环境变量配置兼容性仍保留，但组合启动已不再使用或注入这些变量。
+
+内部 whisper-server 仅绑定本机回环地址；Node API 仍依据 `config.json` 的 `listen.host` 和 `listen.port` 启动。切换之前必须停止旧进程，包装脚本会对 INT/TERM 同时清理它拥有的 Whisper 和 Node 进程。强制 SIGKILL 或断电无法由进程信号处理器捕获。
+
+若只希望运行推理引擎，可使用 `bash scripts/mac-whisper-models.sh engine medium`；然后在另一终端用自己的 `config.json` 启动 Node：`npm run dev`（文件中的模型必须写 `medium`）。
+
+**不要只修改 Node API 模型标签却不重启真实推理引擎。** 模型文件以 whisper-server 的 `-m` 加载路径及 SHA 为准，`GET /v1/models` 只报告 Node 配置中的名称。
 
 ## 5. 本机测试 API，且不泄露凭证
 
