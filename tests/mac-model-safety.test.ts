@@ -26,7 +26,7 @@ function layout() {
   copyFileSync(source,script);
   const model=join(engine,'models','ggml-small.bin');
   writeFileSync(model,'DO-NOT-DELETE-THIS-LOCAL-MODEL');
-  writeFileSync(join(repo,'config.json'),'{"apiKey":"not-a-real-secret"}');
+  writeFileSync(join(repo,'config.json'),'{"apiKey":"not-a-real-secret","whisper":{"model":"small","url":"http://127.0.0.1:8080/inference"}}');
   writeFileSync(join(repo,'dist','src','index.js'),'// stub');
   const env:NodeJS.ProcessEnv={...process.env,WHISPER_CPP_DIR:engine,
     PATH:bin+':'+process.env.PATH};
@@ -78,7 +78,7 @@ test('TERM to wrapper cleans up both owned child processes, without touching oth
     executable(join(t.engine,'build','bin','whisper-server'),
       'echo $$ > "'+pEngine+'"\nexec sleep 120');
     executable(join(t.bin,'node'),
-      'if [ "$1" = "-e" ]; then exit 0; fi\necho $$ > "'+pApi+'"\nexec sleep 120');
+      'if [ "$1" = "-e" ]; then echo "small|8080"; exit 0; fi\necho $ > "'+pApi+'"\nexec sleep 120');
     wrapper=spawn('bash',[t.script,'run','small'],{cwd:t.repo,env:t.env,stdio:'ignore'});
     let started=false;
     for(let i=0;i<100;i++){
