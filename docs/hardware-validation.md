@@ -1,11 +1,20 @@
 # Independent ASR API hardware / browser validation (current v0.1.3)
 
-**Status: M1 DEVELOPMENT SMOKE PASSED; physical-browser end-to-end natural
-classroom evidence PENDING; Mac mini M4 FORMAL HARDWARE ACCEPTANCE DEFERRED.**
+**Status: M1 DEVELOPMENT SMOKE PASSED; Mac mini M4 ASR HTTP SMOKE PASSED
+(operator-reported 2026-10-17); physical-browser and full M4 formal
+hardware/classroom acceptance PENDING.**
 This document uses the current independent HTTP ASR API, **not** the retired
 WebSocket gateway and Worker. Historical M1 synthetic replay details remain
 in `m1-development.md`; those measurements do not establish acceptance of
 the later browser-direct RU-Class architecture.
+
+The operator has now reported partial M4 HTTP results with genuine 8-second
+inference and 20 serial HTTPS successes. Read the
+[M4 field report](m4-2026-10-17-field-report.md) and
+[numerical evidence](m4-2026-10-17-http-benchmark.json) before executing
+remaining browser/hardware acceptance. **Do not substitute the curl benchmark
+for a verified M4 Metal backend, physical browser microphone or five-minute
+natural-speech acceptance.**
 
 ## 1. Prepare the actual inference engine
 
