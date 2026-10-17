@@ -13,7 +13,7 @@ test('Mac deployment helper parses in bash, documents explicit install/run comma
   assert.equal(help.status,0,help.stderr);
   for(const fragment of ['bootstrap','download small|medium|large|all',
     'engine small|medium|large','run small|medium|large','large-v3',
-    'config.json']){
+    'verify small|medium|large|all','config.json']){
     assert.match(help.stdout,new RegExp(fragment.replace(/[|.]/g,x=>'\\'+x),'i'));
   }
 });
@@ -38,7 +38,7 @@ test('default engine path is the sibling whisper.cpp, with existing models reuse
     const r=spawnSync('bash',[copied,'list'],{encoding:'utf8',env});
     assert.equal(r.status,0,r.stderr);
     assert.match(r.stdout,new RegExp(root.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&')+'/whisper\\.cpp'));
-    assert.match(r.stdout,/small : installed/);
+    assert.match(r.stdout,/small : present \(integrity not checked/);
     assert.match(r.stdout,/medium : absent/);
     const custom=join(root,'different-model-home');
     mkdirSync(custom,{recursive:true});
