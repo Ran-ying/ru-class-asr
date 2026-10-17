@@ -1,6 +1,6 @@
 # RU-Class ASR · v0.1.3
 
-独立运行的 Whisper 语音识别 HTTP 服务，提供**OpenAI 兼容 API 的有限子集**。任何获得 API URL、模型和 Key 的服务都可调用它；不要求 RU-Class 主项目在线，也不需要主动连接主项目的旧 Worker。Node.js 应用跨平台，底层 `whisper.cpp` 构建及 GPU 后端按设备决定。此前使用 Mac M1 开发；Mac mini M4 已完成真实 ASR HTTP 部分测试（2026-10-17），正式 Metal/浏览器课堂验收仍未完成。
+独立运行的 Whisper 语音识别 HTTP 服务，提供**OpenAI 兼容 API 的有限子集**。任何获得 API URL、模型和 Key 的服务都可调用它；不要求 RU-Class 主项目在线，也不需要主动连接主项目的旧 Worker。Node.js 应用跨平台，底层 `whisper.cpp` 构建及 GPU 后端按设备决定。此前使用 Mac M1 开发；Mac mini M4 已完成真实 ASR HTTP 与运营者报告的运行时 Metal、多模型/解码增量本地验证（2026-10-17）；真实浏览器长时课堂验收仍未完成。
 
 ## 当前维护与验收入口
 
@@ -9,6 +9,7 @@
 - [全新 Mac mini：安装并切换 Whisper small / medium / large-v3](docs/mac-multi-model-deployment.md)
 - [DeepSeekHarness：全新 Mac mini 模型部署与 A/B/C/D 实验任务书](docs/deepseekharness-mac-mini-model-validation.md)
 - [M4 三模型真实音频对照：解码回退触发、性能与限制](docs/m4-2026-10-17-model-comparison.md)
+- [M4 small 温度增量五组实测：185 次请求、0.2 候选与盲点](docs/m4-2026-10-17-temperature-inc-sweep.md)
 - [维护者工作规范](AGENTS.md)
 
 历史 Worker/WebSocket 方案已退出当前启动路径。浏览器直连用户自选

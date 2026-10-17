@@ -119,6 +119,27 @@ that 0.2 is optimal across diverse Russian audio, nor a validated
 acoustic WER; leave default config at 0 until explicitly changed
 by the operator.
 
+## M4 small decoder-increment sweep (operator report, 2026-10-17)
+
+The operator reported [five-point real-audio comparison](m4-2026-10-17-temperature-inc-sweep.md):
+11 fixed 8-second windows across `temperatureInc` 0/0.1/0.2/0.3/0.4,
+**185/185** local serial authenticated requests succeeded, and 55 separate
+model starts reported active M4 Metal. The same small weights were used.
+At C2 #76 the old 164/7/53 loop changed at 0.2 to 13/12/1 with actual
+fallback, but all five settings produced **the same** 45/6/8 hypothesis at
+24.5 seconds without triggering fallback. 0.1 left C1 #30 with three words;
+0.4 shortened the adjacent 79.4-second hypothesis to three words; their
+semantic correctness remains unknown. Under these controlled engineering
+proxies **0.2 is the leading optional local candidate**, not a proven
+optimal WER setting and not a new project default.
+
+Do **not** refine to 0.15/0.25 just to optimize this one recording
+before checking the full source-window sequence and browser caption
+projection. RU-Class P1 Draft PR #25 remains OFF and unmerged;
+the private original 121/106-window caches may be absent from the test
+Mac and their SHA/source timing must be established before a replay
+claim. `SPEECH_ACCURACY_UNVERIFIED`.
+
 ## Local verification
 
 ```bash
