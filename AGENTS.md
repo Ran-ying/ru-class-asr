@@ -53,6 +53,19 @@ Whisper and Node child and must reap both on SIGINT/SIGTERM (SIGKILL
 cannot be trapped). Real Metal validation must still come from engine
 logs, not the mere build flag.
 
+The user's preferred local startup is **config.json only**: the
+Mac deployment helper supports `run` without an argument, derives
+the local engine model/port from `whisper.model`/`whisper.url`, and
+starts Node without injected WHISPER_MODEL/WHISPER_URL. Positional
+`run MODEL` is only a strict assertion of configuration consistency.
+It rejects inherited whisper-related environment overrides and
+RU_CLASS_ASR_CONFIG to avoid silently superseding the file. Existing
+direct `npm run dev` environment override API is backwards compatible
+for other deployment contexts; do not make it the Mac workflow.
+`temperatureInc: 0.2` was compared only with 0 in the same-small
+operator experiment: **optimality across 0.1/0.3/etc. was not tested**.
+Do not silently switch the historical default from 0.
+
 Operator-reported M4 model comparison is documented in
 `docs/m4-2026-10-17-model-comparison.md`. Small + explicit 0.2
 temperature increment showed an actual fallback and suppressed an
