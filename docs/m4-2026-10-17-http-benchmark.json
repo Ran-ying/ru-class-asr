@@ -1,0 +1,94 @@
+{
+  "type": "operator_reported_m4_real_asr_https_serial_benchmark",
+  "date": "2026-10-17",
+  "verification": "operator_supplied_terminal_output_not_independently_reexecuted",
+  "privacy": "No credentials, private endpoint addresses, audio paths, or recognized text included",
+  "hardware": {
+    "model": "Mac mini",
+    "cpu": "Apple M4",
+    "cores": 10,
+    "memory_gb": 16,
+    "macos": "26.5.2",
+    "node": "24.7.0",
+    "ffmpeg": "8.1"
+  },
+  "model": "Whisper multilingual small",
+  "sample": {
+    "seconds": 8,
+    "sample_rate_hz": 16000,
+    "channels": 1,
+    "encoding": "PCM_S16LE_WAV",
+    "source": "private natural-language operator recording; first 8 seconds only",
+    "local_audio_not_committed": true
+  },
+  "test": {
+    "mode": "serial_one_request_at_a_time",
+    "network": "client HTTPS -> reverse proxy -> private WireGuard -> ASR Node -> loopback whisper.cpp",
+    "curl_flags": [
+      "--noproxy '*'",
+      "--http1.1"
+    ],
+    "body": "multipart",
+    "model_parameter": "small",
+    "language_parameter": "ru",
+    "response_body_saved": false
+  },
+  "individual_total_seconds": [
+    0.905079,
+    0.862349,
+    0.940146,
+    0.849118,
+    0.8667,
+    0.8471,
+    0.879171,
+    0.84866,
+    0.843235,
+    0.884776,
+    0.80943,
+    0.831627,
+    0.816756,
+    0.855456,
+    0.831384,
+    0.861394,
+    0.85153,
+    0.812938,
+    0.822522,
+    0.828234
+  ],
+  "summary": {
+    "count": 20,
+    "success_count": 20,
+    "http_status": 200,
+    "mean_ms": 852.38025,
+    "p50_ms": 848.889,
+    "p95_ms": 906.8323499999999,
+    "min_ms": 809.43,
+    "max_ms": 940.1460000000001,
+    "p95_method": "linear_interpolation_index_(n-1)*0.95"
+  },
+  "single_request": {
+    "loopback_asr_ms": 274.19,
+    "https_total_ms": 962.042,
+    "https_tcp_connect_ms": 5.397,
+    "https_ttfb_ms": 962.017
+  },
+  "comparison_m1": {
+    "kind": "historical_old_gateway_worker_loopback_synthetic_paced_replay",
+    "mean_http_inference_ms": 763.247072633663,
+    "p50_http_inference_ms": 773.7803330000024,
+    "p95_http_inference_ms": 852.8664580000041,
+    "max_http_inference_ms": 975.3623329999973,
+    "count": 101,
+    "comparable_as_speedup": false
+  },
+  "missing": [
+    "engine_M4_Metal_startup_log",
+    "exact_whisper_cpp_revision",
+    "model_sha256",
+    "physical_browser_microphone",
+    "5min_natural_speech",
+    "browser_CORS",
+    "speaker_ground_truth_WER",
+    "long_run_stability"
+  ]
+}
