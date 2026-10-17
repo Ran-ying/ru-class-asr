@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-type Settings = {listen?: {host?: string; port?: number}; whisper?: {url?: string; model?: string}; apiKey?: string; cors?: {allowedOrigins?: string[]}};
+type Settings = {listen?: {host?: string; port?: number}; whisper?: {url?: string; model?: string; temperature?: number; temperatureInc?: number; timeoutMs?: number}; apiKey?: string; cors?: {allowedOrigins?: string[]}};
 function stringValue(value: unknown, name: string, fallback = ''): string {
   if (value == null) return fallback;
   if (typeof value !== 'string') throw new Error(name + ' must be a string');
@@ -27,8 +27,23 @@ export function loadConfig(path = process.env.RU_CLASS_ASR_CONFIG || 'config.jso
     let origin:URL;try{origin=new URL(value);}catch{throw Error('INVALID_CORS_ORIGIN');}
     if(origin.origin!==value||(origin.protocol!=='https:' && !(origin.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(origin.hostname))))throw Error('INVALID_CORS_ORIGIN');
   }
+  const numberOption=(env: string|undefined, configured: number|undefined, fallback: number, name: string, min: number, max: number, integer=false)=>{
+    const value=Number(env ?? configured ?? fallback);
+    if(!Number.isFinite(value)||value<min||value>max||(integer&&!Number.isInteger(value)))
+      throw Error('INVALID_'+name);
+    return value;
+  };
+  const temperature=numberOption(process.env.WHISPER_TEMPERATURE,
+    json.whisper?.temperature,0,'WHISPER_TEMPERATURE',0,1);
+  // Preserve the previous default (0 = no fallback) for reproducibility.
+  // Use 0.2 explicitly to test upstream's temperature fallback behavior.
+  const temperatureInc=numberOption(process.env.WHISPER_TEMPERATURE_INC,
+    json.whisper?.temperatureInc,0,'WHISPER_TEMPERATURE_INC',0,1);
+  const whisperTimeoutMs=numberOption(process.env.WHISPER_TIMEOUT_MS,
+    json.whisper?.timeoutMs,30000,'WHISPER_TIMEOUT_MS',1000,300000,true);
   return {
     host, port, allowedOrigins:[...new Set(origins)],
+    temperature,temperatureInc,whisperTimeoutMs,
     apiKey: stringValue(process.env.ASR_API_KEY ?? json.apiKey, 'apiKey'),
     whisperUrl: stringValue(process.env.WHISPER_URL ?? json.whisper?.url, 'whisper.url', 'http://127.0.0.1:8080/inference'),
     model: stringValue(process.env.WHISPER_MODEL ?? json.whisper?.model, 'whisper.model', 'small')
