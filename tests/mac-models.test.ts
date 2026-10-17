@@ -12,10 +12,11 @@ test('Mac deployment helper parses in bash, documents explicit install/run comma
   const help=spawnSync('bash',[script,'--help'],{encoding:'utf8'});
   assert.equal(help.status,0,help.stderr);
   for(const fragment of ['bootstrap','download small|medium|large|all',
-    'engine small|medium|large','run small|medium|large','large-v3',
+    'engine small|medium|large','run ','large-v3',
     'verify small|medium|large|all','config.json']){
     assert.match(help.stdout,new RegExp(fragment.replace(/[|.]/g,x=>'\\'+x),'i'));
   }
+  assert.ok(help.stdout.includes('run [small|medium|large]'));
 });
 test('Mac helper invalid subcommand does not download or run anything',()=>{
   const invalid=spawnSync('bash',[script,'definitely-invalid'],{encoding:'utf8'});
