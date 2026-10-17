@@ -1,6 +1,6 @@
 # RU-Class ASR · v0.1.3
 
-独立运行的 Whisper 语音识别 HTTP 服务，提供**OpenAI 兼容 API 的有限子集**。任何获得 API URL、模型和 Key 的服务都可调用它；不要求 RU-Class 主项目在线，也不需要主动连接主项目的旧 Worker。Node.js 应用跨平台，底层 `whisper.cpp` 构建及 GPU 后端按设备决定。当前先在 Mac M1 开发，M4 后期完成正式验收。
+独立运行的 Whisper 语音识别 HTTP 服务，提供**OpenAI 兼容 API 的有限子集**。任何获得 API URL、模型和 Key 的服务都可调用它；不要求 RU-Class 主项目在线，也不需要主动连接主项目的旧 Worker。Node.js 应用跨平台，底层 `whisper.cpp` 构建及 GPU 后端按设备决定。此前使用 Mac M1 开发；Mac mini M4 已完成真实 ASR HTTP 部分测试（2026-10-17），正式 Metal/浏览器课堂验收仍未完成。
 
 ## 当前维护与验收入口
 
@@ -11,6 +11,10 @@
 历史 Worker/WebSocket 方案已退出当前启动路径。浏览器直连用户自选
 ASR 端点不依赖 RU-Class 主站服务器，也不使用全站默认 AI 模型。
 目前 M1 合成音频/Metal 联调不等于真实课堂或 M4 正式验收。
+
+## M4 部分实机结果（2026-10-17）
+
+Mac mini M4（16 GB，macOS 26.5.2）已经使用真实 8 秒俄语音频验证本机 ASR 和经 HTTPS/Nginx/WireGuard 的转写请求；连续 **20/20** 次串行公网请求返回 HTTP 200，平均 **852.380 ms**、P95 **906.832 ms**。耗时包含网络及反向代理，不可直接用于计算相对 M1 的芯片加速比例；Metal 启用日志、五分钟真实麦克风和浏览器转写正确性仍未验收。详见 [M4 实测及 M1 对比](docs/m4-2026-10-17-field-report.md)。
 
 ## whisper.cpp 推理引擎
 
@@ -64,4 +68,4 @@ npm run build
 node dist/src/index.js
 ```
 
-真实引擎测试请参阅 [docs/hardware-validation.md](docs/hardware-validation.md)。此前 M1 短俄语音频已完成真实联调，M4、长时间和实体浏览器麦克风仍待验证。
+真实引擎测试请参阅 [docs/hardware-validation.md](docs/hardware-validation.md)。此前 M1 已完成真实引擎开发联调，M4 已通过 HTTP 部分测试；Metal 后端证明、长时间和实体浏览器麦克风测试仍待完成。
