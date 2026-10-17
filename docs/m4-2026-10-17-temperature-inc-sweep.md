@@ -40,7 +40,7 @@ Several other 8-second controls (S40_48, S56_64, S64_72, S96_104) were unchanged
 
 ### Interpretation and decision
 
-- **`0.2` is the best **provisional engineering trial** on these chosen finite proxies**: removes the extreme historical loop, preserves C1 #30's longer candidate and adjacent 79.4 s candidate, and has realistic local M4 latency. It is **not a demonstrated acoustic/WER optimum**, nor statistically representative of diverse classroom speech.
+- **`0.2` is the best provisional engineering trial on these chosen finite proxies**: removes the extreme historical loop, preserves C1 #30's longer candidate and adjacent 79.4 s candidate, and has realistic local M4 latency. It is **not a demonstrated acoustic/WER optimum**, nor statistically representative of diverse classroom speech.
 - 0.1, 0.2, 0.3, 0.4 all eliminated the 164-token extreme loop; none fixed the 24.5 s no-fallback blind spot. Bracketing 0.15 and 0.25 might tune this *same sample*, but adds limited value until more independent audio and a full session/overlap-reducer replay are available. Avoid overfitting.
 - The `0.2` mean (0.667 s) and p95 (1.519 s) are measured over mixed *serial* 8-second requests, not 10-minute browser capture; intermittent fallback may exceed a 1-second request interval and require bounded queue/drop and backpressure accounting.
 - Keep production default `temperatureInc=0` unchanged until a deliberate opt-in; the local experiment's ability to run from `config.json` is not an instruction to edit the owner's live config.
