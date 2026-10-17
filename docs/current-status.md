@@ -59,12 +59,18 @@ Testability boundaries:
   firewall-protected or that real browser CORS/TLS works in Safari.
 - Historical M1/Metal + 101.16-second synthetic Russian inference passed a
   development smoke. It did **not** validate new v0.2 browser-direct
-  top-to-bottom classroom acquisition, five minutes of natural microphone
-  Russian or the later Mac mini M4 acceptance.
+  top-to-bottom classroom acquisition or five minutes of natural microphone
+  Russian. On 2026-10-17, the operator reported **partial Mac mini M4 ASR HTTP
+  smoke success**: 8-second real audio transcribed through loopback and HTTPS
+  reverse proxy/WireGuard; 20/20 authenticated serial HTTPS requests passed,
+  mean 852.380 ms and p95 906.832 ms. **M4 Metal activation and formal
+  browser/classroom acceptance remain unverified.**
+  Details: [M4 field report](m4-2026-10-17-field-report.md) and
+  [privacy-reduced numerical evidence](m4-2026-10-17-http-benchmark.json).
 - Never equate a declared backend label with actual Metal activation:
   verify the external whisper-server startup log separately.
 
-## Real-device acceptance (deferred in part)
+## Real-device acceptance (partially completed)
 
 See `docs/hardware-validation.md` for **current** manual steps. A tester
 should verify on their own hardware and private HTTPS endpoint:
@@ -73,7 +79,8 @@ should verify on their own hardware and private HTTPS endpoint:
   `POST` from a physical browser, not `curl` alone;
 - real microphone ASR, timed response, 429 backpressure, network loss,
   correct final flush and accuracy of the underlying transcript against
-  private Russian speech; the user deferred M4 formal admission.
+  private Russian speech; the **M4 HTTP-only smoke is passed, but M4 formal
+  admission remains pending**.
 Long recording, full in-page WAV playback and recovery are P2 work in the
 **main repository** and are not in scope for this documentation pass.
 
