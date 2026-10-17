@@ -62,9 +62,14 @@ It rejects inherited whisper-related environment overrides and
 RU_CLASS_ASR_CONFIG to avoid silently superseding the file. Existing
 direct `npm run dev` environment override API is backwards compatible
 for other deployment contexts; do not make it the Mac workflow.
-`temperatureInc: 0.2` was compared only with 0 in the same-small
-operator experiment: **optimality across 0.1/0.3/etc. was not tested**.
-Do not silently switch the historical default from 0.
+An additional physical M4 experiment then compared `temperatureInc`
+0, 0.1, 0.2, 0.3 and 0.4 on 11 fixed windows / 185 local requests,
+see `docs/m4-2026-10-17-temperature-inc-sweep.md`. The 0.2 value is
+the current *provisional engineering trial* candidate, not an acoustic
+accuracy optimum. The 24.5 s blind spot triggers **no** fallback at any
+increment; do not pursue 0.15/0.25 on one source before full caption
+replay and more independent audio. Do not silently switch the historical
+default from 0.
 
 Operator-reported M4 model comparison is documented in
 `docs/m4-2026-10-17-model-comparison.md`. Small + explicit 0.2
