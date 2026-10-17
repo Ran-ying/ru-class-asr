@@ -1,5 +1,15 @@
 # DeepSeekHarness 任务书：全新 Mac mini 上验证 RU-Class-ASR 三个 Whisper 模型
 
+> **2026-10-17 post-validation update:** This task's initial small/medium/large
+> operator benchmark is complete and archived in
+> [m4-2026-10-17-model-comparison.md](m4-2026-10-17-model-comparison.md).
+> Earlier commands further below that prefix `WHISPER_TEMPERATURE_INC=...` are
+> **historical experiment commands**. The new recommended Mac workflow edits
+> `config.json` (especially `whisper.model`, `whisper.temperatureInc`,
+> `whisper.timeoutMs`) and starts with
+> `bash scripts/mac-whisper-models.sh run`, without environment overrides.
+> Importantly, 0 versus 0.2 was tested; 0.2 is not proven optimal.
+
 **任务性质：Mac mini 真实部署与实测，不是 GitHub CI。**  
 **工程验收语言：中文。**  
 **人工俄语听辨：已被用户明确取消。**  
