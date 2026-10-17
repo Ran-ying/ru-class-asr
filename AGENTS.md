@@ -44,6 +44,23 @@ this layout.
 A new config `whisper.temperatureInc` defaults to **0** for strict
 old small-model behavior; explicit `0.2` enables a test of upstream
 fallback. `whisper.timeoutMs` supports slower large-model inference.
+The three official multilingual model weights are pinned by exact
+byte count and SHA-256 in `mac-whisper-models.sh`; never treat a file
+above an arbitrary size as a valid GGML model. `list` is presence
+only; `verify MODEL` proves the pinned hash; invalid existing model
+files must never be auto-deleted. The `run` wrapper owns both the
+Whisper and Node child and must reap both on SIGINT/SIGTERM (SIGKILL
+cannot be trapped). Real Metal validation must still come from engine
+logs, not the mere build flag.
+
+Operator-reported M4 model comparison is documented in
+`docs/m4-2026-10-17-model-comparison.md`. Small + explicit 0.2
+temperature increment showed an actual fallback and suppressed an
+extreme lexical loop on C2 #76; another offset remained repetitive
+without fallback. Default 0 is preserved pending rollout. The user's
+private audio and cached hypotheses must not be committed, and
+speech accuracy remains unverified.
+
 The API-reported model ID is a configuration string, **NOT** proof that
 the weight was loaded. Verify whisper-server `-m` path, model SHA-256,
 engine revision, and live Metal backend logs on the host.
