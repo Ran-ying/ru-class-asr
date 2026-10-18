@@ -120,7 +120,8 @@ def make_handler(engine, semaphore):
 
 
 def build_server(engine, port):
-    if not 1024 <= port <= 65535:
+    # Port 0 is reserved for isolated CI test fixtures only. CLI never uses it.
+    if port != 0 and not 1024 <= port <= 65535:
         raise ValueError("invalid_port")
     server = ThreadingHTTPServer(
         ("127.0.0.1", port),
@@ -138,6 +139,8 @@ def main():
     opts = args.parse_args()
     if not 1 <= opts.threads <= 6:
         raise SystemExit("threads must be 1–6")
+    if not 1024 <= opts.port <= 65535:
+        raise SystemExit("port must be 1024–65535")
     # No model downloads here: installation and model verification are explicit.
     if not (opts.model_dir / "manifest.json").is_file():
         raise SystemExit("model not installed; use mac-local-translate.sh install")
