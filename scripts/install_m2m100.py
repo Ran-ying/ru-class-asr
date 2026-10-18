@@ -34,7 +34,8 @@ def verify(path):
     if not mf.is_file() or mf.is_symlink():
         raise RuntimeError("missing_manifest")
     value = json.loads(mf.read_text(encoding="utf-8"))
-    if value.get("model") != MODEL or value.get("revision") != REVISION:
+    if (value.get("model") != MODEL or value.get("revision") != REVISION or
+            value.get("quantization") != "int8"):
         raise RuntimeError("unexpected_model_provenance")
     hashes = value.get("sha256", {})
     if not isinstance(hashes, dict) or any(k not in hashes for k in REQUIRED):
