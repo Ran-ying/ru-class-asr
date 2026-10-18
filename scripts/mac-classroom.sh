@@ -21,6 +21,16 @@ HELP
 settings(){
   [[ -f "$REPO/config.json" ]] || die "Create config.json first, including a private apiKey."
   command -v node >/dev/null 2>&1 || die "Missing Node.js."
+  # This compound launcher uses one authoritative ignored JSON config.
+  # The older standalone API still accepts its environment overrides.
+  local variable
+  for variable in ASR_HOST ASR_PORT ASR_API_KEY ASR_CORS_ORIGINS \
+    WHISPER_MODEL WHISPER_URL WHISPER_TEMPERATURE \
+    WHISPER_TEMPERATURE_INC WHISPER_TIMEOUT_MS RU_CLASS_ASR_CONFIG;do
+    if printenv "$variable" >/dev/null 2>&1;then
+      die "Unset $variable for combined run/install; configure config.json instead."
+    fi
+  done
   local selected
   selected="$(node -e '
     const fs=require("node:fs"); const c=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
