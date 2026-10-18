@@ -13,5 +13,12 @@
   },
   "cors": {
     "allowedOrigins": []
+  },
+  "translation": {
+    "enabled": false,
+    "url": "http://127.0.0.1:8091/translate",
+    "model": "m2m100-418m-int8",
+    "timeoutMs": 10000,
+    "threads": 2
   }
 }
