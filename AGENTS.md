@@ -108,3 +108,28 @@ print a locally generated ASR API key.
   acceptance remain unverified. Do not call automated tests a hardware pass.
 - User deferred P2 long recording and full in-browser playback/recovery in
   the main RU-Class repository; do not introduce incidental P2 changes here.
+
+
+## Optional M2M100 Apple Silicon translation (2026-10-18)
+
+New local translation is **disabled by default**. `config.json.translation`
+selects only a loopback `http://127.0.0.1:PORT/translate`, enabled flag,
+model ID `m2m100-418m-int8`, request timeout and CPU thread limit.
+`src/api.ts` must enforce the same Bearer Key / strict CORS used for ASR
+on `POST /v1/translate`, keep the input and output bounded, and use
+a **separate** translation busy guard so an expensive CPU inference
+does not block ASR. Never expose the Python engine to the Internet or
+put private classroom text, key values, or audio into logs.
+
+`scripts/mac-local-translate.sh install` downloads the pinned upstream
+`facebook/m2m100_418M` snapshot, converts to CTranslate2 CPU INT8 in
+an ignored directory and saves a SHA-256 manifest; it must never overwrite
+existing weights or auto-download at runtime. `scripts/mac-classroom.sh run`
+starts one translator plus the existing Whisper wrapper (which manages
+whisper.cpp+Node) and tears down owned children on termination.
+No sudo, implicit system launchd service, remote listener, model download
+on start, or automatic Whisper model switch. Existing ASR-only workflows
+continue unmodified. CI should test Python service and SHA manifest with
+fixtures and shell syntax; actual CTranslate2 model compatibility,
+Whisper/CPU contention, M4 translation latency and memory are **not**
+validated until physical Mac mini trials.

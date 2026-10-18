@@ -96,3 +96,48 @@ node dist/src/index.js
 ```
 
 真实引擎测试请参阅 [docs/hardware-validation.md](docs/hardware-validation.md)。此前 M1 已完成真实引擎开发联调，M4 已通过 HTTP 部分测试；Metal 后端证明、长时间和实体浏览器麦克风测试仍待完成。
+
+
+## v0.5 准备：Mac mini 本地俄中机器翻译（可选）
+
+**仓库部署脚本已新增，尚未在你的 Mac mini 下载或启动模型。**
+目前 ASR 和原 Web 录音 API 无需更改。新增可选
+`POST /v1/translate` 使用**现有 Bearer API Key 与相同 CORS**；
+后端把俄语送至仅绑定本机回环地址的 M2M100 INT8 翻译服务。
+即使模型不可用，也不会影响 `POST /v1/audio/transcriptions`。
+`GET /v1/models` 仍只返回当前 Whisper 模型，避免误导旧客户端。
+
+当前推荐的组合启动：
+
+```sh
+# Mac mini: Python 3.11、Node >=22.6、cmake、Xcode CLT 必须已安装
+brew install python@3.11 node cmake
+npm ci
+cp -n config.example.json config.json    # 仅首次创建，不覆盖现有私有配置
+# 编辑 config.json：填入随机 apiKey，translation.enabled=true。
+bash scripts/mac-classroom.sh install      # 显式下载/转换/校验模型
+bash scripts/mac-classroom.sh check
+bash scripts/mac-classroom.sh run          # 前台运行，Ctrl+C 停止所有新进程
+```
+
+如果已经有本机 `config.json`，**不要复制示例文件覆盖它**；
+只需添加如下配置对象：
+
+```json
+"translation": {
+  "enabled": true,
+  "url": "http://127.0.0.1:8091/translate",
+  "model": "m2m100-418m-int8",
+  "timeoutMs": 10000,
+  "threads": 2
+}
+```
+
+上面是 JSON 内部的一个字段片段，不是独立配置文件。Mac mini 同时启动
+Whisper Small + CPU INT8 M2M100，翻译模型权重只加载一次。模型下载和
+转换需要数 GB 磁盘空间，并可能临时占用较多内存；转换时建议暂停其他
+重量级推理任务。实际内存/延迟和翻译质量**尚需 Mac mini 实机验收**。
+
+完整步骤、独立运行和故障排查参见
+[本地翻译与组合启动](docs/mac-local-translation.md)。
+`bash scripts/mac-whisper-models.sh run` 依然用于旧 ASR-only 模式。
