@@ -102,7 +102,8 @@ if __name__ == "__main__":
     parser.add_argument("command", choices=["install", "verify"])
     parser.add_argument("--model-dir", type=Path, required=True)
     args = parser.parse_args()
-    dest = args.model_dir.resolve(strict=False)
+    # abspath does NOT follow a potentially malicious user-controlled symlink.
+    dest = Path(os.path.abspath(args.model_dir))
     try:
         if args.command == "install":
             install(dest)
