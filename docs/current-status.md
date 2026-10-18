@@ -188,3 +188,29 @@ Long recording, full in-page WAV playback and recovery are P2 work in the
 Worker-to-server path. They remain only for migration/contract history.
 The actual entrypoint is `src/index.ts`, which creates `src/api.ts` and
 `src/inference.ts`.
+
+
+## Optional local RU→ZH translation route for v0.5 (2026-10-18)
+
+Optional `config.json.translation.enabled` (default false) adds
+Bearer-authenticated, CORS-controlled `POST /v1/translate`. It validates
+bounded JSON `{"text":"...","source":"ru","target":"zh"}` and returns
+`{"translation":"...","source":"ru","target":"zh","model":"m2m100-418m-int8"}`.
+The public Node adapter can only call `http://127.0.0.1:PORT/translate`
+and applies a separate single-inference concurrency gate and configurable
+timeout. Invalid input cannot reach the model, a busy translator gets
+429, and failed translation is isolated from the existing Whisper pathway.
+The optional Python private engine is bound strictly to loopback, speaks
+a separate `POST /translate` / `GET /health` contract, and never logs
+classroom text or credentials. Do not expose it directly through Nginx.
+
+The new `scripts/mac-local-translate.sh` and
+`scripts/mac-classroom.sh` provide explicit model installation,
+SHA manifest verification, and foreground joint startup for M2M100 418M
+CTranslate2 CPU INT8 and the prior Whisper+Node wrapper. The upstream model
+snapshot is pinned by Hugging Face commit; only installation may download
+or convert, and conversion is staged before promotion. The existing
+`scripts/mac-whisper-models.sh run` remains unchanged.
+Node/Python mock tests **do not demonstrate a live M4 model installation,
+translation speed, accuracy or coexistence with Whisper Metal**.
+Follow [local translation runbook](mac-local-translation.md).

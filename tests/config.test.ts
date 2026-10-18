@@ -38,3 +38,28 @@ test('ASR JSON and environment configuration allow non-loopback listeners withou
     await rm(dir,{recursive:true,force:true});
   }
 });
+
+test('translation config is opt-in, bounded and loopback only',async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'ru-class-translation-settings-'));
+  const path=join(dir,'config.json');
+  try{
+    await writeFile(path,JSON.stringify({}));
+    const base=loadConfig(path);
+    assert.equal(base.translationEnabled,false);
+    assert.equal(base.translationUrl,'http://127.0.0.1:8091/translate');
+    assert.equal(base.translationThreads,2);
+    await writeFile(path,JSON.stringify({translation:{enabled:true,threads:3,
+      model:'m2m100-418m-int8',timeoutMs:12000,url:'http://127.0.0.1:8091/translate'}}));
+    assert.equal(loadConfig(path).translationEnabled,true);
+    assert.equal(loadConfig(path).translationThreads,3);
+    for(const url of ['https://remote.example/translate','http://localhost:8091/translate',
+      'http://127.0.0.1:8091/admin','http://127.0.0.1:8091/translate?bad=1']){
+      await writeFile(path,JSON.stringify({translation:{enabled:true,url}}));
+      assert.throws(()=>loadConfig(path),/TRANSLATION_URL_MUST_BE_LOOPBACK/);
+    }
+    await writeFile(path,JSON.stringify({translation:{enabled:true,threads:25}}));
+    assert.throws(()=>loadConfig(path),/INVALID_TRANSLATION_THREADS/);
+    await writeFile(path,JSON.stringify({translation:{enabled:true,model:'other'}}));
+    assert.throws(()=>loadConfig(path),/UNSUPPORTED_TRANSLATION_MODEL/);
+  }finally{await rm(dir,{recursive:true,force:true});}
+});

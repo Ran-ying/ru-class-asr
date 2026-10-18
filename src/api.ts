@@ -1,9 +1,11 @@
 import http from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import type { InferenceAdapter } from './inference.js';
-export function createAsrApi(adapter:InferenceAdapter, config:{apiKey:string;model:string;allowedOrigins?:string[]}) {
+import type { TranslationAdapter } from './translate.js';
+export function createAsrApi(adapter:InferenceAdapter, config:{apiKey:string;model:string;allowedOrigins?:string[];translation?:TranslationAdapter;translationModel?:string}) {
   if(config.apiKey.length<24 || /[\r\n]/.test(config.apiKey))throw new Error('ASR_API_KEY_MIN_24_CHARACTERS');
   let busy=false;
+  let translationBusy=false;
   const server=http.createServer(async(req,res)=>{
     res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
     res.setHeader('Vary','Origin');
@@ -23,13 +25,39 @@ export function createAsrApi(adapter:InferenceAdapter, config:{apiKey:string;mod
     // sends Authorization and should never initiate inference.
     if(req.method==='OPTIONS'){
       if(!origin){res.writeHead(400).end();return;}
-      if(!['/v1/models','/v1/audio/transcriptions'].includes(req.url||'')){res.writeHead(404).end();return;}
+      if(!['/v1/models','/v1/audio/transcriptions',...(config.translation?['/v1/translate']:[])].includes(req.url||'')){res.writeHead(404).end();return;}
       res.writeHead(204).end();return;
     }
     const error=(status:number,code:string)=>{res.writeHead(status).end(JSON.stringify({error:{message:code,type:'invalid_request_error',code}}));};
     const credential=req.headers.authorization||'';const expected=`Bearer ${config.apiKey}`;
     if(Buffer.byteLength(credential)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(credential),Buffer.from(expected))){error(401,'invalid_api_key');return;}
     if(req.method==='GET'&&req.url==='/v1/models'){res.end(JSON.stringify({object:'list',data:[{id:config.model,object:'model',owned_by:'local'}]}));return;}
+    if(req.method==='POST'&&req.url==='/v1/translate'&&config.translation){
+      if(translationBusy){error(429,'translation_busy');return;}
+      translationBusy=true;
+      const controller=new AbortController();
+      const cancel=()=>{if(!res.writableEnded)controller.abort();};
+      res.on('close',cancel);
+      let validated=false;
+      try{
+        const chunks:Buffer[]=[];let bytes=0;
+        for await(const chunk of req){bytes+=chunk.length;if(bytes>8192){error(413,'translation_too_large');return;}chunks.push(chunk);}
+        if(!String(req.headers['content-type']||'').toLowerCase().startsWith('application/json')){error(415,'json_required');return;}
+        const request:unknown=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        if(!request||typeof request!=='object'||Array.isArray(request)){error(400,'invalid_translation_request');return;}
+        const payload=request as Record<string,unknown>;
+        if(typeof payload.text!=='string'||!payload.text.trim()||
+           [...payload.text].length>1200||payload.source!=='ru'||payload.target!=='zh'){
+          error(400,'invalid_translation_request');return;
+        }
+        validated=true;
+        const translation=await config.translation.translate(payload.text.trim(),controller.signal);
+        if(!res.destroyed&&!res.writableEnded)
+          res.end(JSON.stringify({translation,source:'ru',target:'zh',model:config.translationModel||'m2m100-418m-int8'}));
+      }catch{if(!res.destroyed&&!res.writableEnded)error(validated?502:400,validated?'translation_failed':'invalid_translation_request');}
+      finally{translationBusy=false;res.off('close',cancel);}
+      return;
+    }
     if(req.method!=='POST'||req.url!=='/v1/audio/transcriptions'){error(404,'not_found');return;}
     if(busy){error(429,'inference_busy');return;}
     busy=true;const controller=new AbortController();

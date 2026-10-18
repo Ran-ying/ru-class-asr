@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-type Settings = {listen?: {host?: string; port?: number}; whisper?: {url?: string; model?: string; temperature?: number; temperatureInc?: number; timeoutMs?: number}; apiKey?: string; cors?: {allowedOrigins?: string[]}};
+type Settings = {listen?: {host?: string; port?: number}; whisper?: {url?: string; model?: string; temperature?: number; temperatureInc?: number; timeoutMs?: number}; translation?:{enabled?:boolean;url?:string;model?:string;timeoutMs?:number;threads?:number}; apiKey?: string; cors?: {allowedOrigins?: string[]}};
 function stringValue(value: unknown, name: string, fallback = ''): string {
   if (value == null) return fallback;
   if (typeof value !== 'string') throw new Error(name + ' must be a string');
@@ -41,8 +41,23 @@ export function loadConfig(path = process.env.RU_CLASS_ASR_CONFIG || 'config.jso
     json.whisper?.temperatureInc,0,'WHISPER_TEMPERATURE_INC',0,1);
   const whisperTimeoutMs=numberOption(process.env.WHISPER_TIMEOUT_MS,
     json.whisper?.timeoutMs,30000,'WHISPER_TIMEOUT_MS',1000,300000,true);
+  const translationEnabled=json.translation?.enabled??false;
+  if(typeof translationEnabled!=='boolean')throw Error('INVALID_TRANSLATION_ENABLED');
+  const translationUrl=stringValue(json.translation?.url,'translation.url','http://127.0.0.1:8091/translate');
+  const translationPortUrl=new URL(translationUrl);
+  if(translationPortUrl.protocol!=='http:'||translationPortUrl.hostname!=='127.0.0.1'||
+     translationPortUrl.pathname!=='/translate'||translationPortUrl.username||
+     translationPortUrl.password||translationPortUrl.hash||translationPortUrl.search||
+     !Number.isInteger(Number(translationPortUrl.port))||
+     Number(translationPortUrl.port)<1024||Number(translationPortUrl.port)>65535)
+    throw Error('TRANSLATION_URL_MUST_BE_LOOPBACK');
+  const translationTimeoutMs=numberOption(undefined,json.translation?.timeoutMs,10000,'TRANSLATION_TIMEOUT_MS',1000,60000,true);
+  const translationThreads=numberOption(undefined,json.translation?.threads,2,'TRANSLATION_THREADS',1,6,true);
+  const translationModel=stringValue(json.translation?.model,'translation.model','m2m100-418m-int8');
+  if(translationModel!=='m2m100-418m-int8')throw Error('UNSUPPORTED_TRANSLATION_MODEL');
   return {
     host, port, allowedOrigins:[...new Set(origins)],
+    translationEnabled,translationUrl,translationTimeoutMs,translationThreads,translationModel,
     temperature,temperatureInc,whisperTimeoutMs,
     apiKey: stringValue(process.env.ASR_API_KEY ?? json.apiKey, 'apiKey'),
     whisperUrl: stringValue(process.env.WHISPER_URL ?? json.whisper?.url, 'whisper.url', 'http://127.0.0.1:8080/inference'),

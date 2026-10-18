@@ -22,3 +22,8 @@ private/
 *.aiff
 *.aac
 *.webm
+
+# Local RU -> ZH machine translation venv and Python cache
+.venv-translate/
+__pycache__/
+*.pyc

@@ -15,3 +15,5 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
+      - run: bash -n scripts/mac-whisper-models.sh scripts/mac-local-translate.sh scripts/mac-classroom.sh
+      - run: python3 -m unittest discover -s tests/python -p 'test_*.py'
