@@ -176,3 +176,18 @@ CPU 解码/音频预处理产生影响，即使 Whisper 的矩阵计算主要在
   切忌把翻译失败误判成 Whisper 失败。
 - `Port already in use`：停止此前运行的实例，不能让新包装器覆盖
   正在服务的旧实例。
+
+
+### 排错：`ct2-transformers-converter` 找不到（2026-10-20）
+
+旧安装脚本曾使用不带目录的可执行文件名；运行
+`.venv-translate/bin/python scripts/install_m2m100.py` 时并不自动修改
+shell 的 `PATH`，因此已安装的 CTranslate2 仍可能报
+`[Errno 2] No such file or directory: 'ct2-transformers-converter'`。
+现已改为通过**当前虚拟环境 Python 解释器所在目录**寻找转换器；
+不会错误使用另一套 Python 环境的模型转换工具。修复后只需
+`git pull --ff-only origin main` 再运行 `bash scripts/mac-classroom.sh install`，
+已有 Whisper 权重、Node 构建和 Hugging Face 缓存可复用，无需删除
+`.venv-translate` 或模型缓存。若修复后仍提示缺少转换器，
+可以只检查 `ls -l .venv-translate/bin/ct2-transformers-converter`；
+不要未经确认就清空 Python 虚拟环境或模型目录。
