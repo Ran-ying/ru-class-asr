@@ -2,6 +2,8 @@ import importlib.util
 import io
 import json
 import tempfile
+import os
+from unittest.mock import patch
 import threading
 import unittest
 import urllib.error
@@ -81,6 +83,22 @@ class ApiTests(unittest.TestCase):
 
 
 class ManifestTests(unittest.TestCase):
+    def test_converter_resolves_active_python_venv_not_global_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            scripts = Path(tmp) / "venv" / "bin"
+            scripts.mkdir(parents=True)
+            python = scripts / "python"
+            converter = scripts / "ct2-transformers-converter"
+            python.touch()
+            converter.write_text("#!/bin/sh\nexit 0\n")
+            converter.chmod(0o755)
+            with patch.object(install.sys, "executable", str(python)):
+                with patch.dict(os.environ, {"PATH": "/usr/bin:/bin"}):
+                    self.assertEqual(install.converter_executable(), str(converter))
+                converter.unlink()
+                with self.assertRaisesRegex(RuntimeError, "converter missing from active Python"):
+                    install.converter_executable()
+
     def test_manifest_verification_without_real_model_download(self):
         with tempfile.TemporaryDirectory() as tmp:
             model = Path(tmp)

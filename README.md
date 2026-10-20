@@ -141,3 +141,9 @@ Whisper Small + CPU INT8 M2M100，翻译模型权重只加载一次。模型下�
 完整步骤、独立运行和故障排查参见
 [本地翻译与组合启动](docs/mac-local-translation.md)。
 `bash scripts/mac-whisper-models.sh run` 依然用于旧 ASR-only 模式。
+
+
+**2026-10-20 安装修复：** M2M100 转换器现固定从本项目
+`.venv-translate/bin/ct2-transformers-converter` 查找，不再依赖
+shell PATH。如已经在安装末尾遇到 `No such file or directory`，
+更新仓库后重新运行 `bash scripts/mac-classroom.sh install` 即可。

@@ -49,6 +49,20 @@ def verify(path):
     return value
 
 
+def converter_executable():
+    # pip installs console entrypoints into the active Python environment's
+    # scripts directory. Running a venv's python does NOT add its bin to PATH.
+    # Resolve alongside the interpreter so no global/other-venv executable
+    # can be selected accidentally.
+    command = Path(sys.executable).parent / "ct2-transformers-converter"
+    if not command.is_file() or not os.access(command, os.X_OK):
+        raise RuntimeError(
+            "ctranslate2 converter missing from active Python environment: " +
+            str(command) + " (rerun mac-local-translate.sh install)"
+        )
+    return str(command)
+
+
 def install(destination):
     if destination.exists() or destination.is_symlink():
         verify(destination)
@@ -71,7 +85,7 @@ def install(destination):
         if not (Path(src) / "model.safetensors").is_file():
             raise RuntimeError("pinned_source_weights_missing")
         cmd = [
-            "ct2-transformers-converter", "--model", src,
+            converter_executable(), "--model", src,
             "--output_dir", str(stage), "--quantization", "int8",
             "--copy_files", *TOKENIZER_FILES
         ]
