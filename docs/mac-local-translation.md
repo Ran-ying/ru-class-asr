@@ -226,3 +226,27 @@ bash scripts/mac-classroom.sh check
 请保留完整新 traceback 与 `.venv-translate/bin/python -m pip show
 ctranslate2 transformers torch` 版本信息；不要自行修改 CT2 的
 `_alias_variables` 或删除完整性校验。
+
+
+### 排错：本地 M2M100 加载成功，Whisper 随后报告端口被占用（2026-10-20）
+
+如果日志出现 `[PASS] M2M100 loaded`，随后旧 Whisper 启动器报告
+`Port already in use; stop the previous inference engine`，说明翻译模型
+**已能实际加载**，但原 Whisper 推理端口（通常是 8080）上还有现成
+监听进程，或另一个程序占用了该端口。这不表示翻译模型损坏。
+新的联合启动器会在**加载 M2M100 之前**检查配置里的三个端口：
+`whisper.url` 推理端口、`listen.port` Node API 端口以及
+`translation.url` 本地引擎端口。它不会杀死或接管原有的进程。
+
+```bash
+lsof -nP -iTCP:8080 -sTCP:LISTEN
+lsof -nP -iTCP:8090 -sTCP:LISTEN
+lsof -nP -iTCP:8091 -sTCP:LISTEN
+```
+
+先根据 PID/命令确认归属。如果是此前在终端运行的
+`mac-whisper-models.sh run`，回到原终端 Control+C 停止旧实例；
+如果由 launchd 等服务管理，则从**原启动机制**中停止它。
+不要盲目使用 `killall`、`pkill` 或 `sudo kill -9`。
+确定端口已经释放后直接运行
+`bash scripts/mac-classroom.sh run`；不需要重新下载模型。
