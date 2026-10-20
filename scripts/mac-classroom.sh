@@ -42,20 +42,28 @@ settings(){
       throw Error("translation.url must use local HTTP /translate");
     const tport=Number(url.port);
     const aport=c.listen?.port??8090;
+    const whisperUrl=new URL(c.whisper?.url);
+    if(whisperUrl.protocol!=="http:"||whisperUrl.hostname!=="127.0.0.1"||
+       whisperUrl.pathname!=="/inference"||whisperUrl.username||
+       whisperUrl.password||whisperUrl.search||whisperUrl.hash)
+      throw Error("whisper.url must be http://127.0.0.1:PORT/inference");
+    const wport=Number(whisperUrl.port);
     if(!Number.isInteger(tport)||tport<1024||tport>65535||
        !Number.isInteger(aport)||aport<1024||aport>65535||
-       aport===tport)throw Error("Invalid or conflicting service ports");
+       !Number.isInteger(wport)||wport<1024||wport>65535||
+       new Set([tport,aport,wport]).size!==3)
+      throw Error("Invalid or conflicting translation, API or Whisper ports");
     if(typeof c.apiKey!=="string"||c.apiKey.length<24)throw Error("Valid private apiKey required");
     if(!["small","medium","large-v3"].includes(c.whisper?.model))
       throw Error("Whisper model must be small, medium or large-v3");
-    process.stdout.write([c.whisper.model,tport,aport].join(" "));
+    process.stdout.write([c.whisper.model,tport,aport,wport].join(" "));
   ' "$REPO/config.json")" || die "Check config.json model, Key and ports."
-  read -r WHISPER_MODEL TRANSLATION_PORT API_PORT <<< "$selected"
+  read -r WHISPER_MODEL TRANSLATION_PORT API_PORT WHISPER_PORT <<< "$selected"
 }
 free_port(){
   if command -v lsof >/dev/null 2>&1;then
     [[ -z "$(lsof -nP -iTCP:"$1" -sTCP:LISTEN 2>/dev/null || true)" ]] ||
-      die "Port $1 already in use; existing service was NOT interrupted."
+      die "Port $1 already in use. Inspect: lsof -nP -iTCP:$1 -sTCP:LISTEN. Stop the existing service from its owning launcher and retry; no process was interrupted."
   fi
 }
 check(){
@@ -76,8 +84,13 @@ install(){
 }
 run(){
   check
-  free_port "$TRANSLATION_PORT"
+  # Inspect ALL three configured ports BEFORE loading the translator model.
+  # An existing Whisper instance must be stopped by its owning launcher,
+  # not killed automatically; otherwise this wrapper would load M2M100,
+  # fail at the old ASR script's preflight, and tear down the new process.
+  free_port "$WHISPER_PORT"
   free_port "$API_PORT"
+  free_port "$TRANSLATION_PORT"
   local translate_pid="" asr_pid="" count ready=no
   cleanup(){
     trap - EXIT INT TERM

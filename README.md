@@ -156,3 +156,9 @@ Transformers 4.45.2），进入模型下载前会验证两者版本。
 如之前在 `aten::equal ... Meta tensors` 处失败，更新仓库后
 重新运行 `bash scripts/mac-classroom.sh install`，无需清空
 Whisper/模型缓存。此组合尚需 Mac mini 实机模型转换验收。
+
+
+**2026-10-20 联合启动改进：** `mac-classroom.sh run` 在加载本地
+翻译模型之前，先检查 Whisper、Node API 和翻译引擎三个端口。
+遇到旧 Whisper 实例时立即提示具体端口与 `lsof` 检查命令，
+不会加载一遍模型后才报错，也不会杀死正在运行的旧服务。
