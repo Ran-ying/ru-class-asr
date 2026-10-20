@@ -1,0 +1,11 @@
+# Known legacy Transformers / CTranslate2 converter API pair for M2M100.
+# New Transformers releases create Meta tensors which CTranslate2's
+# alias-variable comparison (torch.equal) cannot materialize.
+# Keep these TWO versions paired; this file applies ONLY to .venv-translate.
+ctranslate2==4.5.0
+transformers==4.45.2
+# Runtime/tokenizer and safetensors dependencies stay in this private venv.
+sentencepiece>=0.2,<1
+torch>=2.3,<3
+huggingface_hub>=0.26,<1
+safetensors>=0.4,<1

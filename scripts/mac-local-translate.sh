@@ -63,10 +63,10 @@ install(){
   [[ ! -L "$VENV" ]] || die "Refuse symlinked Python environment."
   if [[ ! -d "$VENV" ]];then "$PYTHON_BIN" -m venv "$VENV";fi
   [[ -x "$VENV/bin/python" ]] || die "Incomplete Python venv."
+  # The converter and transformers loader are an API pair. Do not let pip
+  # silently upgrade only one half into an incompatible Meta-tensor workflow.
   "$VENV/bin/python" -m pip install --disable-pip-version-check --no-cache-dir \
-    'ctranslate2>=4.5,<5' 'transformers>=4.45,<5' \
-    'sentencepiece>=0.2,<1' 'torch>=2.3,<3' \
-    'huggingface_hub>=0.26,<1' 'safetensors>=0.4,<1'
+    -r "$REPO/translate/requirements-converter.txt"
   "$VENV/bin/python" "$REPO/scripts/install_m2m100.py" install --model-dir "$MODEL_DIR"
   model_verify
   echo "[PASS] Local CPU INT8 translation installed; no service was started."
