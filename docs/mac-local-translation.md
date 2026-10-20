@@ -191,3 +191,38 @@ shell 的 `PATH`，因此已安装的 CTranslate2 仍可能报
 `.venv-translate` 或模型缓存。若修复后仍提示缺少转换器，
 可以只检查 `ls -l .venv-translate/bin/ct2-transformers-converter`；
 不要未经确认就清空 Python 虚拟环境或模型目录。
+
+
+### 排错：Meta tensor 上的 torch.equal 报错（2026-10-20）
+
+如果已经解决转换器路径问题，转换过程中却出现
+`NotImplementedError: aten::equal ... Meta tensors`，这不是缺少
+Whisper 模型，也不是 Node/CMake 错误。原安装器允许
+`ctranslate2>=4.5,<5` 和 `transformers>=4.45,<5` 任意更新；
+实机记录中解析到了 CTranslate2 **4.8.3** + Transformers **4.57.6**
+（PyTorch **2.14.1**），它们在 M2M100 的权重转换/别名检测路径
+上遇到了无法实际比较的 Meta tensors。官方 CTranslate2 早期版本
+使用 `torch_dtype` 加载，而后期更改为 `dtype`；搭配新版
+Transformers 的 Meta 初始化流程容易产生不兼容。
+
+现在转换专用环境固定为
+`ctranslate2==4.5.0` + `transformers==4.45.2`，
+使用 macOS arm64/Python 3.11 可安装的版本组合。这是针对
+**兼容性故障提出的转换组合**，尚未在用户 M4 上完成实测转换，
+不是性能或正确率已验收的声明。安装器在下载前检查实际已安装
+版本，防止静默出现另一组组合；转换模型目录记录两者版本。
+`torch` 保留原安装环境中符合 2.x 要求的版本，暂时不强制
+重新下载巨大的 PyTorch 权重。只会调整被 Git 忽略的
+`.venv-translate`，不会删除 Whisper 权重、Hugging Face 缓存、
+用户的 API Key 或课堂历史。
+
+```bash
+git pull --ff-only origin main
+bash scripts/mac-classroom.sh install
+bash scripts/mac-classroom.sh check
+```
+
+上游模型与 CT2 引擎实际启动仍须单独验收。如果又报 Meta tensor，
+请保留完整新 traceback 与 `.venv-translate/bin/python -m pip show
+ctranslate2 transformers torch` 版本信息；不要自行修改 CT2 的
+`_alias_variables` 或删除完整性校验。

@@ -147,3 +147,12 @@ Whisper Small + CPU INT8 M2M100，翻译模型权重只加载一次。模型下�
 `.venv-translate/bin/ct2-transformers-converter` 查找，不再依赖
 shell PATH。如已经在安装末尾遇到 `No such file or directory`，
 更新仓库后重新运行 `bash scripts/mac-classroom.sh install` 即可。
+
+
+**2026-10-20 Meta tensor 转换兼容修复：** 安装中的 Python 转换器
+不再使用自动浮动的 CTranslate2/Transformers 组合；
+固定到 `translate/requirements-converter.txt`（CT2 4.5.0 +
+Transformers 4.45.2），进入模型下载前会验证两者版本。
+如之前在 `aten::equal ... Meta tensors` 处失败，更新仓库后
+重新运行 `bash scripts/mac-classroom.sh install`，无需清空
+Whisper/模型缓存。此组合尚需 Mac mini 实机模型转换验收。

@@ -2,6 +2,7 @@
 """Explicit, version-pinned M2M100 model installation and local SHA manifest."""
 import argparse
 import hashlib
+from importlib import metadata
 import json
 import os
 import shutil
@@ -17,6 +18,22 @@ TOKENIZER_FILES = (
     "tokenizer_config.json", "special_tokens_map.json"
 )
 REQUIRED = ("model.bin", "config.json") + TOKENIZER_FILES
+CONVERTER_VERSIONS = {"ctranslate2": "4.5.0", "transformers": "4.45.2"}
+
+
+def verify_conversion_versions():
+    """Fail before model download when conversion-only loaders are incompatible."""
+    for distribution, required in CONVERTER_VERSIONS.items():
+        try:
+            installed = metadata.version(distribution)
+        except metadata.PackageNotFoundError:
+            installed = "missing"
+        if installed != required:
+            raise RuntimeError(
+                f"incompatible converter environment: {distribution} "
+                f"must be {required}, found {installed}; run "
+                "bash scripts/mac-local-translate.sh install"
+            )
 
 
 def digest(path):
@@ -68,6 +85,10 @@ def install(destination):
         verify(destination)
         print("Existing converted model verified; no files overwritten.")
         return
+    # Validate BEFORE network and temporary work directories: a new
+    # Transformers loader may leave Meta tensors unmaterialized, and an older
+    # CTranslate2 converter may not understand the newer dtype API.
+    verify_conversion_versions()
     from huggingface_hub import snapshot_download
     parent = destination.parent
     parent.mkdir(parents=True, exist_ok=True)
@@ -98,7 +119,8 @@ def install(destination):
             hashes[name] = digest(file)
         (stage / "manifest.json").write_text(
             json.dumps({"model": MODEL, "revision": REVISION,
-                        "quantization": "int8", "sha256": hashes},
+                        "quantization": "int8", "sha256": hashes,
+                        "converterVersions": CONVERTER_VERSIONS},
                        sort_keys=True, indent=2) + "\n", encoding="utf-8"
         )
         verify(stage)

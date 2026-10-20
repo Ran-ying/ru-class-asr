@@ -83,6 +83,39 @@ class ApiTests(unittest.TestCase):
 
 
 class ManifestTests(unittest.TestCase):
+    def test_converter_and_transformers_are_checked_before_download(self):
+        with patch.object(install.metadata, "version",
+                          side_effect=lambda name: {
+                              "ctranslate2": "4.5.0",
+                              "transformers": "4.45.2"
+                          }[name]):
+            install.verify_conversion_versions()
+
+        with patch.object(install.metadata, "version",
+                          side_effect=lambda name: {
+                              "ctranslate2": "4.8.3",
+                              "transformers": "4.57.6"
+                          }[name]):
+            with self.assertRaisesRegex(RuntimeError,
+                                        "ctranslate2 must be 4.5.0"):
+                install.verify_conversion_versions()
+
+        with patch.object(install.metadata, "version",
+                          side_effect=lambda name: {
+                              "ctranslate2": "4.5.0",
+                              "transformers": "4.57.6"
+                          }[name]):
+            with self.assertRaisesRegex(RuntimeError,
+                                        "transformers must be 4.45.2"):
+                install.verify_conversion_versions()
+
+    def test_shell_installer_pins_the_matching_conversion_versions(self):
+        requirements = (ROOT / "translate/requirements-converter.txt").read_text()
+        shell = (ROOT / "scripts/mac-local-translate.sh").read_text()
+        self.assertIn("ctranslate2==4.5.0", requirements)
+        self.assertIn("transformers==4.45.2", requirements)
+        self.assertIn("-r \"$REPO/translate/requirements-converter.txt\"", shell)
+
     def test_converter_resolves_active_python_venv_not_global_path(self):
         with tempfile.TemporaryDirectory() as tmp:
             scripts = Path(tmp) / "venv" / "bin"
