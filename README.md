@@ -54,6 +54,31 @@ bash scripts/mac-whisper-models.sh run
 
 对该组合启动器，环境中若还有同名的 WHISPER_* / RU_CLASS_ASR_CONFIG 旧覆盖项将被拒绝，以确保本地文件是唯一生效来源。直接 `npm run dev` 的兼容环境变量支持仍保留给已有自动化部署，但个人 Mac 不需要用它们。
 
+## 静音检测（Silero VAD，推荐开启）
+
+Whisper 对纯静音或底噪窗口会输出训练数据里的字幕署名，例如
+`Редактор субтитров Н.Закомолдина / Корректор А.Егорова` 或
+`[звук …]`。课堂停顿时，这些文字会出现在实时字幕里，并可能进入正式翻译。
+whisper.cpp 自带 Silero VAD：只把检测到的语音段交给 Whisper，静音窗口返回空文本。
+
+2026-10-21 在 Mac mini M4（whisper.cpp v1.9.5、small、temperatureInc 0.2）实测：
+8 秒纯静音与底噪从上述幻觉变为空文本（约 0.35 s → 0.03 s）；
+合成俄语语音在前置/后置静音和单独语音三种情况下，输出与关闭 VAD 时**完全相同**。
+这是合成语音的冒烟测试，不是课堂准确率验收。
+
+```bash
+bash scripts/mac-whisper-models.sh download-vad   # 下载并校验 ggml-silero-v6.2.0.bin
+```
+
+然后在本地 `config.json` 的 `whisper` 中加入（仅片段）：
+
+```json
+"vad": { "enabled": true, "model": "silero-v6.2.0", "threshold": 0.5 }
+```
+
+重启 `run`（或 `mac-classroom.sh run`）后，启动日志会显示 `Silero VAD: true`。
+未写 `vad` 时保持旧行为（关闭）。VAD 文件按字节数和 SHA-256 固定校验，校验失败不会删除已有文件。
+
 ## 启动独立 API 服务
 
 在 `ru-class-asr` 项目根目录：

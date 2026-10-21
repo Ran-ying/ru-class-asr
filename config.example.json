@@ -9,7 +9,12 @@
     "model": "small",
     "temperature": 0,
     "temperatureInc": 0,
-    "timeoutMs": 30000
+    "timeoutMs": 30000,
+    "vad": {
+      "enabled": false,
+      "model": "silero-v6.2.0",
+      "threshold": 0.5
+    }
   },
   "cors": {
     "allowedOrigins": []

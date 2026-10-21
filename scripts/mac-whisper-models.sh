@@ -17,6 +17,8 @@ RU-Class-ASR new Mac mini helper:
   bash scripts/mac-whisper-models.sh verify small|medium|large|all
   bash scripts/mac-whisper-models.sh engine small|medium|large
   bash scripts/mac-whisper-models.sh run [small|medium|large]
+  bash scripts/mac-whisper-models.sh download-vad
+  bash scripts/mac-whisper-models.sh verify-vad
 small/medium/large are multilingual; large maps to large-v3.
 bootstrap clones/builds whisper.cpp and refuses to auto-update it.
 download uses whisper.cpp's official GGML download script; models coexist.
@@ -25,6 +27,10 @@ run reads whisper.model and whisper.url FROM ignored config.json, starts the
 matching whisper-server and the Node API; optional MODEL must match that file.
 No model/URL environment injection. Requires a private API key, npm ci + build.
 Ctrl+C stops both services.
+download-vad fetches whisper.cpp's official Silero VAD GGML (silero-v6.2.0).
+With whisper.vad.enabled=true in config.json, run starts whisper-server with
+--vad so silent/noise-only windows return empty text instead of Whisper's
+subtitle-credit hallucinations. The VAD file is pinned by size and SHA-256.
 No public listener, TLS proxy, Homebrew, or service auto-start is configured.
 Default checkout: a sibling directory next to ru-class-asr (../whisper.cpp).
 Existing sibling whisper.cpp checkouts and downloaded GGML models are reused.
@@ -78,6 +84,32 @@ model_ready(){
   [[ "$actual_sha" == "$expected_sha" ]] ||
     fail "SHA256 mismatch for $1; existing file was NOT overwritten or deleted."
   echo "[PASS] Verified $1: exact byte count and official SHA-256."
+}
+VAD_ID=silero-v6.2.0
+vad_ready(){
+  # Official ggml-org/whisper-vad silero-v6.2.0 weights; identical to
+  # whisper.cpp's own models/for-tests-silero-v6.2.0-ggml.bin fixture.
+  local path="$ENGINE_DIR/models/ggml-$VAD_ID.bin" size actual_sha
+  [[ -f "$path" && ! -L "$path" ]] ||
+    fail "Missing VAD model; run download-vad first (or set whisper.vad.enabled=false)."
+  size="$(stat -f %z "$path")" || fail "Could not read VAD model size."
+  [[ "$size" == 885098 ]] ||
+    fail "Incorrect/incomplete VAD model: $size bytes, expected 885098. The existing file was NOT deleted."
+  actual_sha="$(shasum -a 256 "$path" | awk '{print $1}')" || fail "Failed to hash VAD model."
+  [[ "$actual_sha" == 2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987 ]] ||
+    fail "SHA256 mismatch for VAD model; existing file was NOT overwritten or deleted."
+  echo "[PASS] Verified VAD $VAD_ID: exact byte count and official SHA-256."
+}
+download_vad(){
+  engine_ready
+  if [[ -f "$ENGINE_DIR/models/ggml-$VAD_ID.bin" ]];then
+    echo "[INFO] Existing VAD model not overwritten: $VAD_ID"
+  else
+    [[ -f "$ENGINE_DIR/models/download-vad-model.sh" ]] ||
+      fail "This whisper.cpp checkout has no VAD download script; it is too old for --vad."
+    (cd "$ENGINE_DIR" && sh models/download-vad-model.sh "$VAD_ID")
+  fi
+  vad_ready
 }
 validate_port(){
   [[ "$PORT" =~ ^[0-9]+$ ]] && (( PORT>=1024 && PORT<=65535 )) ||
@@ -139,7 +171,7 @@ run_both(){
       fail "Unset $variable before run; put settings in config.json."
     fi
   done
-  local configured configured_model configured_port requested_model
+  local configured configured_model configured_port configured_vad configured_vad_threshold requested_model
   configured="$(node -e '
     const fs=require("node:fs");
     let config;
@@ -159,10 +191,20 @@ run_both(){
     const port=Number(url.port||"80");
     if(!Number.isInteger(port)||port<1024||port>65535)
       throw Error("Invalid local whisper-server port");
-    process.stdout.write(model+"|"+port);
+    const vad=config.whisper?.vad??{};
+    if(typeof vad!=="object"||vad===null||Array.isArray(vad))
+      throw Error("config.json whisper.vad must be an object");
+    const vadEnabled=vad.enabled??false;
+    if(typeof vadEnabled!=="boolean")throw Error("whisper.vad.enabled must be true or false");
+    if((vad.model??"silero-v6.2.0")!=="silero-v6.2.0")
+      throw Error("whisper.vad.model must be silero-v6.2.0");
+    const threshold=vad.threshold??0.5;
+    if(typeof threshold!=="number"||!(threshold>=0.1&&threshold<=0.9))
+      throw Error("whisper.vad.threshold must be between 0.1 and 0.9");
+    process.stdout.write(model+"|"+port+"|"+vadEnabled+"|"+threshold);
   ' "$REPO/config.json")" || fail "Invalid config.json model/URL."
-  IFS='|' read -r configured_model configured_port <<< "$configured"
-  [[ -n "$configured_model" && -n "$configured_port" ]] ||
+  IFS='|' read -r configured_model configured_port configured_vad configured_vad_threshold <<< "$configured"
+  [[ -n "$configured_model" && -n "$configured_port" && -n "$configured_vad" ]] ||
     fail "Incomplete config.json model/port."
   if [[ -n "${1:-}" ]];then
     requested_model="$(model_name "$1")"
@@ -173,6 +215,12 @@ run_both(){
   validate_port
   engine_ready
   model_ready "$configured_model"
+  local vad_args=()
+  if [[ "$configured_vad" == true ]];then
+    vad_ready
+    vad_args=(--vad --vad-model "$ENGINE_DIR/models/ggml-$VAD_ID.bin"
+      --vad-threshold "$configured_vad_threshold")
+  fi
   node -e 'const v=process.versions.node.split(".").map(Number);
     if(v[0]<22 || (v[0]===22&&v[1]<6))process.exit(1)' ||
     fail "Node.js 22.6+ required."
@@ -201,8 +249,9 @@ run_both(){
   trap 'exit 143' TERM
   "$ENGINE_DIR/build/bin/whisper-server" \
     --host 127.0.0.1 --port "$PORT" \
-    -m "$ENGINE_DIR/models/ggml-$configured_model.bin" -l ru &
+    -m "$ENGINE_DIR/models/ggml-$configured_model.bin" -l ru ${vad_args[@]+"${vad_args[@]}"} &
   engine_pid="$!"
+  echo "[INFO] Silero VAD: $configured_vad (threshold $configured_vad_threshold)."
   echo "[INFO] Starting $configured_model from config.json. Waiting for local engine (up to 240 seconds)."
   local ready=no
   for ((count=0;count<240;count++));do
@@ -240,6 +289,8 @@ main(){
       if [[ "$1" == all ]];then
         for id in small medium large-v3;do model_ready "$id";done
       else model_ready "$(model_name "$1")";fi;;
+    download-vad) (($#==0))||fail "Unexpected arguments.";platform;download_vad;;
+    verify-vad) (($#==0))||fail "Unexpected arguments.";need shasum;vad_ready;;
     engine) (($#==1))||fail "engine needs model";engine_foreground "$(model_name "$1")";;
     run) (($#<=1))||fail "run accepts at most one model";run_both "${1:-}";;
     *) fail "Unknown command; use --help";;

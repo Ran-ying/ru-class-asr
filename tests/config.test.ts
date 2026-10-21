@@ -63,3 +63,20 @@ test('translation config is opt-in, bounded and loopback only',async()=>{
     assert.throws(()=>loadConfig(path),/UNSUPPORTED_TRANSLATION_MODEL/);
   }finally{await rm(dir,{recursive:true,force:true});}
 });
+
+test('whisper.vad is optional, off by default, and strictly validated',async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'ru-class-asr-vad-'));const file=join(dir,'config.json');
+  const write=(vad:unknown)=>writeFile(file,JSON.stringify({apiKey:'a-long-test-only-api-key-for-asr',
+    whisper:{url:'http://127.0.0.1:8080/inference',model:'small',...(vad===undefined?{}:{vad})}}));
+  try{
+    await write(undefined);
+    assert.deepEqual(loadConfig(file).vad,{enabled:false,model:'silero-v6.2.0',threshold:0.5});
+    await write({enabled:true,threshold:0.4});
+    assert.deepEqual(loadConfig(file).vad,{enabled:true,model:'silero-v6.2.0',threshold:0.4});
+    for(const [bad,code] of [[{enabled:'yes'},/INVALID_WHISPER_VAD_ENABLED/],[{model:'silero-v5.1.2'},/UNSUPPORTED_WHISPER_VAD_MODEL/],
+      [{threshold:1.5},/INVALID_WHISPER_VAD_THRESHOLD/],[[],/INVALID_WHISPER_VAD/]] as const){
+      await write(bad);
+      assert.throws(()=>loadConfig(file),code);
+    }
+  }finally{await rm(dir,{recursive:true,force:true});}
+});

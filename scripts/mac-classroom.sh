@@ -56,9 +56,9 @@ settings(){
     if(typeof c.apiKey!=="string"||c.apiKey.length<24)throw Error("Valid private apiKey required");
     if(!["small","medium","large-v3"].includes(c.whisper?.model))
       throw Error("Whisper model must be small, medium or large-v3");
-    process.stdout.write([c.whisper.model,tport,aport,wport].join(" "));
+    process.stdout.write([c.whisper.model,tport,aport,wport,c.whisper?.vad?.enabled===true].join(" "));
   ' "$REPO/config.json")" || die "Check config.json model, Key and ports."
-  read -r WHISPER_MODEL TRANSLATION_PORT API_PORT WHISPER_PORT <<< "$selected"
+  read -r WHISPER_MODEL TRANSLATION_PORT API_PORT WHISPER_PORT WHISPER_VAD <<< "$selected"
 }
 free_port(){
   if command -v lsof >/dev/null 2>&1;then
@@ -69,6 +69,8 @@ free_port(){
 check(){
   settings
   bash "$REPO/scripts/mac-whisper-models.sh" verify "$WHISPER_MODEL"
+  # Fail before loading M2M100 rather than after, if VAD is on but missing.
+  if [[ "$WHISPER_VAD" == true ]];then bash "$REPO/scripts/mac-whisper-models.sh" verify-vad;fi
   bash "$REPO/scripts/mac-local-translate.sh" verify
   [[ -f "$REPO/dist/src/index.js" ]] || die "Run npm ci and npm run build."
   echo "[PASS] Two model files and Node build ready (not a performance test)."
@@ -77,6 +79,7 @@ install(){
   settings
   bash "$REPO/scripts/mac-whisper-models.sh" bootstrap
   bash "$REPO/scripts/mac-whisper-models.sh" download "$WHISPER_MODEL"
+  if [[ "$WHISPER_VAD" == true ]];then bash "$REPO/scripts/mac-whisper-models.sh" download-vad;fi
   (cd "$REPO" && npm ci && npm run build)
   bash "$REPO/scripts/mac-local-translate.sh" install
   check
