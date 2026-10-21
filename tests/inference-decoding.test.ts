@@ -73,3 +73,21 @@ test('per-model config accepts explicit fallback and long timeout; defaults rema
     await rm(dir,{recursive:true,force:true});
   }
 });
+
+test('verbose_json keeps sanitized window-relative segment times and drops word timings',async()=>{
+  const {sanitizeSegments}=await import('../src/inference.js');
+  const originalFetch=globalThis.fetch;
+  let format='';
+  globalThis.fetch=async(_u,options)=>{format=String((options?.body as FormData).get('response_format'));
+    return new Response(JSON.stringify({text:' Сегодня. ',segments:[{id:0,start:3.0123,end:5.81,text:' Сегодня. ',
+      words:[{word:'Сег',start:0.1,end:0.2}]}]}),{status:200});};
+  try{
+    const r=await new WhisperHttp('http://127.0.0.1:8080/inference').inferVerbose(Buffer.alloc(8*16000*2));
+    assert.equal(format,'verbose_json');
+    assert.deepEqual(r,{text:'Сегодня.',duration:8,segments:[{start:3.012,end:5.81,text:'Сегодня.'}]});
+  }finally{globalThis.fetch=originalFetch;}
+  assert.throws(()=>sanitizeSegments([{start:2,end:1,text:'x'}],8),/INVALID_WHISPER_SEGMENTS/);
+  assert.throws(()=>sanitizeSegments([{start:0,end:9,text:'x'}],8),/INVALID_WHISPER_SEGMENTS/);
+  assert.throws(()=>sanitizeSegments([{start:4,end:5,text:'a'},{start:1,end:2,text:'b'}],8),/INVALID_WHISPER_SEGMENTS/);
+  assert.throws(()=>sanitizeSegments('nope',8),/INVALID_WHISPER_SEGMENTS/);
+});

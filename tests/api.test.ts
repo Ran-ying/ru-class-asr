@@ -100,3 +100,22 @@ test('empty or omitted CORS allowlist permits any browser Origin without disabli
     }
   }
 });
+
+test('verbose_json returns bounded segment times only when the engine supports them',async()=>{
+  const key='SIMULATED_VERBOSE_KEY_24_CHARS';
+  const segments=[{start:3.01,end:5.81,text:'Сегодня мы изучаем.'}];
+  const verbose=createAsrApi({infer:async()=>'x',inferVerbose:async()=>({text:'Сегодня мы изучаем.',duration:8,segments})},{apiKey:key,model:'small'});
+  const plain=createAsrApi({infer:async()=>'x'},{apiKey:key,model:'small'});
+  const form=(format:string)=>{const f=new FormData();f.set('model','small');f.set('response_format',format);
+    f.set('file',new Blob([new Uint8Array(wav(Buffer.alloc(6400)))]),'t.wav');return f;};
+  for(const s of [verbose,plain]){s.listen(0,'127.0.0.1');await new Promise<void>(r=>s.once('listening',r));}
+  const url=(s:any)=>'http://127.0.0.1:'+s.address().port+'/v1/audio/transcriptions';
+  const headers={Authorization:'Bearer '+key};
+  try{
+    const body=await fetch(url(verbose),{method:'POST',headers,body:form('verbose_json')}).then(r=>r.json()) as any;
+    assert.equal(body.text,'Сегодня мы изучаем.');
+    assert.deepEqual(body.segments,[{id:0,start:3.01,end:5.81,text:'Сегодня мы изучаем.'}]);
+    assert.equal((await fetch(url(verbose),{method:'POST',headers,body:form('json')}).then(r=>r.json()) as any).text,'x');
+    assert.equal((await fetch(url(plain),{method:'POST',headers,body:form('verbose_json')})).status,400);
+  }finally{for(const s of [verbose,plain]){s.closeAllConnections();await new Promise<void>(r=>s.close(()=>r()));}}
+});

@@ -70,7 +70,8 @@ export function createAsrApi(adapter:InferenceAdapter, config:{apiKey:string;mod
       const form=await request.formData();const file=form.get('file');
       const format=form.get('response_format')||'json';
       if(form.get('model')!==config.model){error(400,'invalid_model');return;}
-      if((form.get('language')||'ru')!=='ru'||!['json','text'].includes(String(format))){error(400,'unsupported_language_or_format');return;}
+      if((form.get('language')||'ru')!=='ru'||!['json','text','verbose_json'].includes(String(format))||
+         (format==='verbose_json'&&!adapter.inferVerbose)){error(400,'unsupported_language_or_format');return;}
       if(!(file instanceof File)){error(400,'file_required');return;}
       const data=Buffer.from(await file.arrayBuffer());
       // v0.1 supports PCM WAV, 16 kHz mono, up to 30 seconds per request.
@@ -82,6 +83,13 @@ export function createAsrApi(adapter:InferenceAdapter, config:{apiKey:string;mod
       }
       if(!validFormat||!pcm||!pcm.length||pcm.length%2||pcm.length>16000*2*30){error(400,'wav_requires_16khz_mono_pcm16_max_30s');return;}
       validating=false;
+      if(format==='verbose_json'){
+        // OpenAI-style subset: segment start/end seconds within THIS window.
+        const result=await adapter.inferVerbose!(pcm,controller.signal);
+        res.end(JSON.stringify({task:'transcribe',language:'ru',duration:result.duration,text:result.text,
+          segments:result.segments.map((s,id)=>({id,start:s.start,end:s.end,text:s.text}))}));
+        return;
+      }
       const text=await adapter.infer(pcm,controller.signal);
       if(format==='text'){res.setHeader('Content-Type','text/plain; charset=utf-8');res.end(text);}else res.end(JSON.stringify({text}));
     }catch{if(!res.writableEnded&&!res.destroyed)error(validating?400:502,validating?'invalid_audio_request':'transcription_failed');}
