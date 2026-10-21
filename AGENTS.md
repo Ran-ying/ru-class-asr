@@ -147,3 +147,13 @@ silence / low noise changed from subtitle-credit or `[звук …]` hallucinati
 to empty text, and synthetic Russian speech text was byte-identical with and
 without VAD. This is NOT a classroom accuracy or 44-window replay result;
 re-run the private replay before claiming caption equivalence.
+
+
+## verbose_json segment times for RU-Class v0.6 (2026-10-21)
+
+`response_format=verbose_json` forwards whisper.cpp SEGMENT start/end (window-
+relative seconds) through `sanitizeSegments` (ordered, within duration+0.5 s,
+<=200, text <=4000). Text must stay byte-identical to `json` (verified on the
+M4). Do not forward word/token timings: under VAD they are relative to the
+speech-only audio and are sub-word pieces. Adapters without `inferVerbose`
+answer 400 so browsers fall back to `json`.

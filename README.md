@@ -1,4 +1,4 @@
-# RU-Class ASR · v0.1.3
+# RU-Class ASR · v0.1.4
 
 独立运行的 Whisper 语音识别 HTTP 服务，提供**OpenAI 兼容 API 的有限子集**。任何获得 API URL、模型和 Key 的服务都可调用它；不要求 RU-Class 主项目在线，也不需要主动连接主项目的旧 Worker。Node.js 应用跨平台，底层 `whisper.cpp` 构建及 GPU 后端按设备决定。此前使用 Mac M1 开发；Mac mini M4 已完成真实 ASR HTTP 与运营者报告的运行时 Metal、多模型/解码增量本地验证（2026-10-17）；真实浏览器长时课堂验收仍未完成。
 
@@ -108,8 +108,9 @@ ASR 默认监听 `127.0.0.1`，但可以直接将 `listen.host`（或 `ASR_HOST`
 ## HTTP API 子集
 
 - `GET /v1/models`：返回唯一配置的模型名。
-- `POST /v1/audio/transcriptions`：携带 `Authorization: Bearer <ASR_API_KEY>`，multipart 表单 `file`、`model`，可选 `language=ru` 和 `response_format=json|text`。
-- 仅支持 16 kHz 单声道 PCM16 WAV，最长 30 秒，上传限制 2 MiB；一个并行推理，忙时返回 429。无 SSE/流式 token/词级时间戳，实时字幕由主应用调度重叠短音频请求。
+- `POST /v1/audio/transcriptions`：携带 `Authorization: Bearer <ASR_API_KEY>`，multipart 表单 `file`、`model`，可选 `language=ru` 和 `response_format=json|text|verbose_json`。
+- `verbose_json`（v0.1.4，供 RU-Class v0.6 逐句回放）：返回 `{task,language,duration,text,segments:[{id,start,end,text}]}`，`start/end` 是**本次窗口内**的秒数；`text` 与 `json` 完全相同。分段经过校验（有序、在窗口内、最多 200 段）。**不返回词级时间**：开启 VAD 时 whisper.cpp 的词时间相对于去掉静音后的音频，且是子词碎片（M4 实测）。
+- 仅支持 16 kHz 单声道 PCM16 WAV，最长 30 秒，上传限制 2 MiB；一个并行推理，忙时返回 429。无 SSE/流式 token，实时字幕由主应用调度重叠短音频请求。
 
 ## 测试
 
