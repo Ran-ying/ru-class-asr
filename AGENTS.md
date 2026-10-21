@@ -133,3 +133,17 @@ continue unmodified. CI should test Python service and SHA manifest with
 fixtures and shell syntax; actual CTranslate2 model compatibility,
 Whisper/CPU contention, M4 translation latency and memory are **not**
 validated until physical Mac mini trials.
+
+
+## Optional whisper.cpp Silero VAD (2026-10-21)
+
+`config.json.whisper.vad` (`enabled`, `model: silero-v6.2.0`, `threshold`
+0.1–0.9) is **off when absent**. When enabled, `mac-whisper-models.sh run`
+verifies `ggml-silero-v6.2.0.bin` (885098 bytes, SHA-256 `2aa269b7…6987`,
+identical to whisper.cpp's own test fixture) and passes `--vad --vad-model
+--vad-threshold` to whisper-server; `download-vad` / `verify-vad` never
+delete or overwrite an existing file. Physical M4 smoke (2026-10-21): pure
+silence / low noise changed from subtitle-credit or `[звук …]` hallucinations
+to empty text, and synthetic Russian speech text was byte-identical with and
+without VAD. This is NOT a classroom accuracy or 44-window replay result;
+re-run the private replay before claiming caption equivalence.

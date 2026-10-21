@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-type Settings = {listen?: {host?: string; port?: number}; whisper?: {url?: string; model?: string; temperature?: number; temperatureInc?: number; timeoutMs?: number}; translation?:{enabled?:boolean;url?:string;model?:string;timeoutMs?:number;threads?:number}; apiKey?: string; cors?: {allowedOrigins?: string[]}};
+type Settings = {listen?: {host?: string; port?: number}; whisper?: {url?: string; model?: string; temperature?: number; temperatureInc?: number; timeoutMs?: number; vad?: {enabled?: boolean; model?: string; threshold?: number}}; translation?:{enabled?:boolean;url?:string;model?:string;timeoutMs?:number;threads?:number}; apiKey?: string; cors?: {allowedOrigins?: string[]}};
 function stringValue(value: unknown, name: string, fallback = ''): string {
   if (value == null) return fallback;
   if (typeof value !== 'string') throw new Error(name + ' must be a string');
@@ -41,6 +41,15 @@ export function loadConfig(path = process.env.RU_CLASS_ASR_CONFIG || 'config.jso
     json.whisper?.temperatureInc,0,'WHISPER_TEMPERATURE_INC',0,1);
   const whisperTimeoutMs=numberOption(process.env.WHISPER_TIMEOUT_MS,
     json.whisper?.timeoutMs,30000,'WHISPER_TIMEOUT_MS',1000,300000,true);
+  // whisper.cpp-side Silero VAD. The Mac launcher passes it to whisper-server;
+  // the Node API only validates it so a typo fails at startup, not mid-class.
+  const vad=json.whisper?.vad??{};
+  if(typeof vad!=='object'||vad===null||Array.isArray(vad))throw Error('INVALID_WHISPER_VAD');
+  const vadEnabled=vad.enabled??false;
+  if(typeof vadEnabled!=='boolean')throw Error('INVALID_WHISPER_VAD_ENABLED');
+  const vadModel=stringValue(vad.model,'whisper.vad.model','silero-v6.2.0');
+  if(vadModel!=='silero-v6.2.0')throw Error('UNSUPPORTED_WHISPER_VAD_MODEL');
+  const vadThreshold=numberOption(undefined,vad.threshold,0.5,'WHISPER_VAD_THRESHOLD',0.1,0.9);
   const translationEnabled=json.translation?.enabled??false;
   if(typeof translationEnabled!=='boolean')throw Error('INVALID_TRANSLATION_ENABLED');
   const translationUrl=stringValue(json.translation?.url,'translation.url','http://127.0.0.1:8091/translate');
@@ -59,6 +68,7 @@ export function loadConfig(path = process.env.RU_CLASS_ASR_CONFIG || 'config.jso
     host, port, allowedOrigins:[...new Set(origins)],
     translationEnabled,translationUrl,translationTimeoutMs,translationThreads,translationModel,
     temperature,temperatureInc,whisperTimeoutMs,
+    vad:{enabled:vadEnabled,model:vadModel,threshold:vadThreshold},
     apiKey: stringValue(process.env.ASR_API_KEY ?? json.apiKey, 'apiKey'),
     whisperUrl: stringValue(process.env.WHISPER_URL ?? json.whisper?.url, 'whisper.url', 'http://127.0.0.1:8080/inference'),
     model: stringValue(process.env.WHISPER_MODEL ?? json.whisper?.model, 'whisper.model', 'small')
