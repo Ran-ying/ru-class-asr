@@ -267,7 +267,14 @@ run_both(){
     exec node dist/src/index.js
   ) &
   api_pid="$!"
-  wait "$api_pid"
+  # Watch both children (Bash 3.2: no wait -n). If whisper-server dies, the
+  # API would keep answering 502 transcription_failed, so stop everything
+  # and make the failure visible instead.
+  while kill -0 "$engine_pid" 2>/dev/null && kill -0 "$api_pid" 2>/dev/null;do
+    sleep 2
+  done
+  kill -0 "$engine_pid" 2>/dev/null || fail "Engine exited; stopping the API. See the log above."
+  fail "API exited; stopping the engine."
 }
 main(){
   local action=help id

@@ -44,6 +44,11 @@ export class WhisperHttp implements InferenceAdapter {
     const form = new FormData();
     form.set('file', new Blob([new Uint8Array(wav(pcm))], {type:'audio/wav'}), 'window.wav');
     form.set('language','ru'); form.set('response_format',format); form.set('temperature',String(this.decoding.temperature)); form.set('temperature_inc',String(this.decoding.temperatureInc));
+    // whisper.cpp's verbose_json otherwise runs language auto-detection on the
+    // VAD-trimmed audio; a fully silent window leaves no audio, the detected id
+    // is negative and whisper-server segfaults (verified with v1.9.5 on the M4).
+    // The language is fixed to ru, so the probabilities are never needed.
+    if(format==='verbose_json')form.set('no_language_probabilities','true');
     const response = await fetch(this.url, {method:'POST', body:form, signal: AbortSignal.any([AbortSignal.timeout(this.timeoutMs), ...(signal ? [signal] : [])])});
     if (!response.ok) throw new Error(`WHISPER_HTTP_${response.status}`);
     if (Number(response.headers.get('content-length') ?? 0) > 1024 * 1024) throw new Error('WHISPER_RESPONSE_TOO_LARGE');

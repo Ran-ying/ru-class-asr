@@ -157,3 +157,16 @@ relative seconds) through `sanitizeSegments` (ordered, within duration+0.5 s,
 M4). Do not forward word/token timings: under VAD they are relative to the
 speech-only audio and are sub-word pieces. Adapters without `inferVerbose`
 answer 400 so browsers fall back to `json`.
+
+## Silent-window whisper-server crash (2026-10-22, v0.1.5)
+
+With `--vad`, a `verbose_json` request whose whole window is silence made
+whisper-server (v1.9.5) segfault: its default language-probability pass runs
+on the VAD-trimmed (empty) audio, gets language id -2 and passes the null
+`whisper_lang_str_full` result into JSON. Reproduced on the M4 with 8 s of
+zeros; `json` and `verbose_json` + `no_language_probabilities=true` both
+survive. `WhisperHttp` therefore always sends `no_language_probabilities=true`
+for `verbose_json`; never remove it while VAD is supported.
+`mac-whisper-models.sh run` now watches the engine as well as the API and
+exits when either dies, so a dead engine can no longer hide behind a live API
+that answers every request with 502 `transcription_failed`.
