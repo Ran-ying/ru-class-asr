@@ -1,4 +1,4 @@
-# RU-Class ASR · v0.1.5
+# RU-Class ASR · v0.1.6
 
 独立运行的 Whisper 语音识别 HTTP 服务，提供**OpenAI 兼容 API 的有限子集**。任何获得 API URL、模型和 Key 的服务都可调用它；不要求 RU-Class 主项目在线，也不需要主动连接主项目的旧 Worker。Node.js 应用跨平台，底层 `whisper.cpp` 构建及 GPU 后端按设备决定。此前使用 Mac M1 开发；Mac mini M4 已完成真实 ASR HTTP 与运营者报告的运行时 Metal、多模型/解码增量本地验证（2026-10-17）；真实浏览器长时课堂验收仍未完成。
 
@@ -146,6 +146,8 @@ bash scripts/mac-classroom.sh install      # 显式下载/转换/校验模型
 bash scripts/mac-classroom.sh check
 bash scripts/mac-classroom.sh run          # 前台运行，Ctrl+C 停止所有新进程
 ```
+
+**v0.1.6 whisper 崩溃自动重启：** `run` 运行中如果 whisper-server 退出（例如段错误），脚本会在原地重启它（约 2 秒），API 不停；这期间请求返回 502，RU-Class 0.6.2 起的网页会自动重试，上课不中断。10 分钟内崩溃超过 5 次（`MAX_ENGINE_RESTARTS` 可调）则整体停止并报错，避免无限重启。日志里的 `[WARN] Engine exited ... restarting` 表示发生过一次自动重启。
 
 如果已经有本机 `config.json`，**不要复制示例文件覆盖它**；
 只需添加如下配置对象：

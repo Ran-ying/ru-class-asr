@@ -6,6 +6,7 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 ENGINE_DIR="$(dirname "$REPO")/whisper.cpp"
 if [[ -n "$(printenv WHISPER_CPP_DIR 2>/dev/null || true)" ]];then ENGINE_DIR="$WHISPER_CPP_DIR";fi
 PORT=8080
+MAX_ENGINE_RESTARTS="${MAX_ENGINE_RESTARTS:-5}"
 if [[ -n "$(printenv WHISPER_CPP_PORT 2>/dev/null || true)" ]];then PORT="$WHISPER_CPP_PORT";fi
 usage(){
   cat <<'HELP'
@@ -247,33 +248,52 @@ run_both(){
   trap cleanup EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM
-  "$ENGINE_DIR/build/bin/whisper-server" \
-    --host 127.0.0.1 --port "$PORT" \
-    -m "$ENGINE_DIR/models/ggml-$configured_model.bin" -l ru ${vad_args[@]+"${vad_args[@]}"} &
-  engine_pid="$!"
+  start_engine(){
+    "$ENGINE_DIR/build/bin/whisper-server" \
+      --host 127.0.0.1 --port "$PORT" \
+      -m "$ENGINE_DIR/models/ggml-$configured_model.bin" -l ru ${vad_args[@]+"${vad_args[@]}"} &
+    engine_pid="$!"
+  }
+  # Returns non-zero if the engine dies or is not answering within 240 s.
+  wait_engine(){
+    for ((count=0;count<240;count++));do
+      kill -0 "$engine_pid" 2>/dev/null || return 1
+      if curl --noproxy '*' --silent --fail --max-time 2 \
+        "http://127.0.0.1:$PORT/" -o /dev/null;then return 0;fi
+      sleep 1
+    done
+    return 1
+  }
+  start_engine
   echo "[INFO] Silero VAD: $configured_vad (threshold $configured_vad_threshold)."
   echo "[INFO] Starting $configured_model from config.json. Waiting for local engine (up to 240 seconds)."
-  local ready=no
-  for ((count=0;count<240;count++));do
-    kill -0 "$engine_pid" 2>/dev/null || fail "Engine exited during model load."
-    if curl --noproxy '*' --silent --fail --max-time 2 \
-      "http://127.0.0.1:$PORT/" -o /dev/null;then ready=yes;break;fi
-    sleep 1
-  done
-  [[ "$ready" == yes ]] || fail "Engine did not become ready."
+  wait_engine || fail "Engine exited or did not become ready during model load."
   echo "[PASS] Model loaded. Starting RU-Class-ASR using config.json: $configured_model"
   (
     cd "$REPO"
     exec node dist/src/index.js
   ) &
   api_pid="$!"
-  # Watch both children (Bash 3.2: no wait -n). If whisper-server dies, the
-  # API would keep answering 502 transcription_failed, so stop everything
-  # and make the failure visible instead.
-  while kill -0 "$engine_pid" 2>/dev/null && kill -0 "$api_pid" 2>/dev/null;do
-    sleep 2
+  # Watch both children (Bash 3.2: no wait -n). A crashed whisper-server is
+  # restarted in place: clients (RU-Class >= 0.6.2) retry its 502s, so a
+  # lesson continues after a few seconds. A crash loop (more than
+  # MAX_ENGINE_RESTARTS within 10 minutes) stops everything visibly.
+  local restarts=0 window_start=$SECONDS code
+  while kill -0 "$api_pid" 2>/dev/null;do
+    if ! kill -0 "$engine_pid" 2>/dev/null;then
+      code=0;wait "$engine_pid" 2>/dev/null || code=$?
+      if ((SECONDS-window_start>600));then restarts=0;window_start=$SECONDS;fi
+      restarts=$((restarts+1))
+      ((restarts<=MAX_ENGINE_RESTARTS)) ||
+        fail "Engine crashed $MAX_ENGINE_RESTARTS times within 10 minutes; stopping the API."
+      echo "[WARN] Engine exited (code $code) at $(date '+%H:%M:%S'); restarting ($restarts/$MAX_ENGINE_RESTARTS)." >&2
+      start_engine
+      wait_engine || fail "Engine could not be restarted; stopping the API."
+      echo "[PASS] Engine restarted."
+    fi
+    # Background sleep + wait: a TERM/INT trap runs at once, not after sleep.
+    sleep 2 & wait "$!" || true
   done
-  kill -0 "$engine_pid" 2>/dev/null || fail "Engine exited; stopping the API. See the log above."
   fail "API exited; stopping the engine."
 }
 main(){

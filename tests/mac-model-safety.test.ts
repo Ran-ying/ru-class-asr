@@ -85,7 +85,9 @@ test('TERM to wrapper cleans up both owned child processes, without touching oth
       'exec sleep 120');
     wrapper=spawn('bash',[t.script,'run','small'],{cwd:t.repo,env:t.env,stdio:'ignore'});
     let started=false;
-    for(let i=0;i<100;i++){
+    // Up to 10 s: the wrapper runs several `node -e` checks first, which took
+    // over 2 s on a busy Mac mini and made this test fail spuriously.
+    for(let i=0;i<500;i++){
       if(existsSync(pEngine)&&existsSync(pApi)){started=true;break;}
       await new Promise(r=>setTimeout(r,20));
     }

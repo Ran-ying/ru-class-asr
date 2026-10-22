@@ -170,3 +170,15 @@ for `verbose_json`; never remove it while VAD is supported.
 `mac-whisper-models.sh run` now watches the engine as well as the API and
 exits when either dies, so a dead engine can no longer hide behind a live API
 that answers every request with 502 `transcription_failed`.
+
+## Engine auto-restart (2026-10-22, v0.1.6)
+
+`mac-whisper-models.sh run` restarts a dead whisper-server in place instead of
+exiting (start_engine/wait_engine); the Node API keeps running and returns 502
+for ~2 s, which RU-Class >= 0.6.2 retries. More than `MAX_ENGINE_RESTARTS`
+(default 5) within 10 minutes still fails visibly. The watch loop uses
+`sleep & wait` so TERM/INT cleanup is immediate. Verified on the M4 with
+`kill -SEGV`: recovery 2 s, crash-loop limit stops both children, TERM leaves
+no listeners. The TERM safety test now waits up to 10 s: the wrapper's
+`node -e` prechecks exceeded the old 2 s budget on a busy Mac (pre-existing
+spurious failure).
