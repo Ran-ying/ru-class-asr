@@ -77,13 +77,16 @@ test('per-model config accepts explicit fallback and long timeout; defaults rema
 test('verbose_json keeps sanitized window-relative segment times and drops word timings',async()=>{
   const {sanitizeSegments}=await import('../src/inference.js');
   const originalFetch=globalThis.fetch;
-  let format='';
-  globalThis.fetch=async(_u,options)=>{format=String((options?.body as FormData).get('response_format'));
+  let format='',noLanguageProbabilities:unknown;
+  globalThis.fetch=async(_u,options)=>{const body=options?.body as FormData;
+    format=String(body.get('response_format'));noLanguageProbabilities=body.get('no_language_probabilities');
     return new Response(JSON.stringify({text:' Сегодня. ',segments:[{id:0,start:3.0123,end:5.81,text:' Сегодня. ',
       words:[{word:'Сег',start:0.1,end:0.2}]}]}),{status:200});};
   try{
     const r=await new WhisperHttp('http://127.0.0.1:8080/inference').inferVerbose(Buffer.alloc(8*16000*2));
     assert.equal(format,'verbose_json');
+    // Without this, a silent window under VAD crashes whisper-server.
+    assert.equal(noLanguageProbabilities,'true');
     assert.deepEqual(r,{text:'Сегодня.',duration:8,segments:[{start:3.012,end:5.81,text:'Сегодня.'}]});
   }finally{globalThis.fetch=originalFetch;}
   assert.throws(()=>sanitizeSegments([{start:2,end:1,text:'x'}],8),/INVALID_WHISPER_SEGMENTS/);
