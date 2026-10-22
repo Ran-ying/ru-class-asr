@@ -291,7 +291,8 @@ run_both(){
       wait_engine || fail "Engine could not be restarted; stopping the API."
       echo "[PASS] Engine restarted."
     fi
-    sleep 2
+    # Background sleep + wait: a TERM/INT trap runs at once, not after sleep.
+    sleep 2 & wait "$!" || true
   done
   fail "API exited; stopping the engine."
 }
